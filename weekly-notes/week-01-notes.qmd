@@ -10,7 +10,9 @@ format: docx
   -How to push and pull between GitHub and GitHub Desktop
   
 ## Coding Techniques
-  -Quarto
+  -Quarto and render
 
 ## Questions & Challenges
+  -Setting up weekly notes
+  -What is the relationship and difference between yml and qmd
 ---
