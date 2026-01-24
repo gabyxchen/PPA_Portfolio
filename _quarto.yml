@@ -8,6 +8,10 @@ website:
     left:
       - href: index.qmd
         text: Home
+      -text: Weekly Notes
+      menu:
+        -href: weekly-notes/week-010notes.qmd
+        text: Week 1
 
 format:
   html:
