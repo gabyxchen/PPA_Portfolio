@@ -18,7 +18,6 @@ Advanced spatial analysis and data science for urban planning and public policy.
 - Name: Gab Chen
 - Background:
     B.Arch at Rhode Island School of Design
-    Born and grew up in Shenzhen, China
 
 
 ## Contact

@@ -10,7 +10,10 @@ website:
         text: Home
       - href: weekly-notes/week-01-notes.qmd
         text: Weekly Notes
-        
+          - text: Labs
+        menu:
+          - href: lab/lab_0/index.qmd
+            text: "Lab 0: dplyr Basics"
 
 format:
   html:
