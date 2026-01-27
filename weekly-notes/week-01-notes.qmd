@@ -15,4 +15,5 @@ format: docx
 ## Questions & Challenges
   -Setting up weekly notes
   -What is the relationship and difference between yml and qmd
+  -How to change yml file to correctly linked files in the menu bar
 ---
