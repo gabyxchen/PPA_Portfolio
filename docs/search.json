@@ -4,42 +4,28 @@
     "href": "weekly-notes/week-01-notes.html",
     "title": "week-01-notes",
     "section": "",
-    "text": "-How to create a portfolio using template -How to create a repository on GitHub -How to push and pull between GitHub and GitHub Desktop"
+    "text": "How to create a portfolio using template\nHow to create a repository on GitHub\nHow to push and pull between GitHub and GitHub Desktop"
   },
   {
     "objectID": "weekly-notes/week-01-notes.html#key-concepts-learned",
     "href": "weekly-notes/week-01-notes.html#key-concepts-learned",
     "title": "week-01-notes",
     "section": "",
-    "text": "-How to create a portfolio using template -How to create a repository on GitHub -How to push and pull between GitHub and GitHub Desktop"
+    "text": "How to create a portfolio using template\nHow to create a repository on GitHub\nHow to push and pull between GitHub and GitHub Desktop"
   },
   {
     "objectID": "weekly-notes/week-01-notes.html#coding-techniques",
     "href": "weekly-notes/week-01-notes.html#coding-techniques",
     "title": "week-01-notes",
     "section": "Coding Techniques",
-    "text": "Coding Techniques\n-Quarto and render"
+    "text": "Coding Techniques\n\nQuarto and render"
   },
   {
     "objectID": "weekly-notes/week-01-notes.html#questions-challenges",
     "href": "weekly-notes/week-01-notes.html#questions-challenges",
     "title": "week-01-notes",
     "section": "Questions & Challenges",
-    "text": "Questions & Challenges\n-Setting up weekly notes -What is the relationship and difference between yml and qmd -How to change yml file to correctly linked files in the menu bar —"
-  },
-  {
-    "objectID": "weekly-notes/week-01-notes.html#quarto",
-    "href": "weekly-notes/week-01-notes.html#quarto",
-    "title": "week-01-notes",
-    "section": "Quarto",
-    "text": "Quarto\nQuarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see https://quarto.org."
-  },
-  {
-    "objectID": "weekly-notes/week-01-notes.html#running-code",
-    "href": "weekly-notes/week-01-notes.html#running-code",
-    "title": "week-01-notes",
-    "section": "Running Code",
-    "text": "Running Code\nWhen you click the Render button a document will be generated that includes both content and the output of embedded code. You can embed code like this:\n\n\nCode\n1 + 1\n\n\n[1] 2\n\n\nYou can add options to executable code like this\n\n\n[1] 4\n\n\nThe echo: false option disables the printing of code (only output is displayed)."
+    "text": "Questions & Challenges\n\nSetting up weekly notes\nWhat is the relationship and difference between yml and qmd\nHow to change yml file to correctly linked files in the menu bar"
   },
   {
     "objectID": "lab/lab0/lab0.html",
@@ -151,14 +137,14 @@
     "href": "lab/lab1/lab1.html",
     "title": "Lab 1: Census Data Quality for Policy Decisions",
     "section": "",
-    "text": "You are a data analyst for the [Your State] Department of Human Services. The department is considering implementing an algorithmic system to identify communities that should receive priority for social service funding and outreach programs. Your supervisor has asked you to evaluate the quality and reliability of available census data to inform this decision.\nDrawing on our Week 2 discussion of algorithmic bias, you need to assess not just what the data shows, but how reliable it is and what communities might be affected by data quality issues.\n\n\n\n\nApply dplyr functions to real census data for policy analysis\nEvaluate data quality using margins of error\nConnect technical analysis to algorithmic decision-making\nIdentify potential equity implications of data reliability issues\nCreate professional documentation for policy stakeholders\n\n\n\n\nSubmit by posting your updated portfolio link on Canvas. Your assignment should be accessible at your-portfolio-url/labs/lab_1/\nMake sure to update your _quarto.yml navigation to include this assignment under an “Labs” menu."
+    "text": "You are a data analyst for the Philadelphia Department of Human Services. The department is considering implementing an algorithmic system to identify communities that should receive priority for social service funding and outreach programs. Your supervisor has asked you to evaluate the quality and reliability of available census data to inform this decision.\nDrawing on our Week 2 discussion of algorithmic bias, you need to assess not just what the data shows, but how reliable it is and what communities might be affected by data quality issues.\n\n\n\n\nApply dplyr functions to real census data for policy analysis\nEvaluate data quality using margins of error\nConnect technical analysis to algorithmic decision-making\nIdentify potential equity implications of data reliability issues\nCreate professional documentation for policy stakeholders\n\n\n\n\nSubmit by posting your updated portfolio link on Canvas. Your assignment should be accessible at your-portfolio-url/labs/lab_1/\nMake sure to update your _quarto.yml navigation to include this assignment under an “Labs” menu."
   },
   {
     "objectID": "lab/lab1/lab1.html#scenario",
     "href": "lab/lab1/lab1.html#scenario",
     "title": "Lab 1: Census Data Quality for Policy Decisions",
     "section": "",
-    "text": "You are a data analyst for the [Your State] Department of Human Services. The department is considering implementing an algorithmic system to identify communities that should receive priority for social service funding and outreach programs. Your supervisor has asked you to evaluate the quality and reliability of available census data to inform this decision.\nDrawing on our Week 2 discussion of algorithmic bias, you need to assess not just what the data shows, but how reliable it is and what communities might be affected by data quality issues."
+    "text": "You are a data analyst for the Philadelphia Department of Human Services. The department is considering implementing an algorithmic system to identify communities that should receive priority for social service funding and outreach programs. Your supervisor has asked you to evaluate the quality and reliability of available census data to inform this decision.\nDrawing on our Week 2 discussion of algorithmic bias, you need to assess not just what the data shows, but how reliable it is and what communities might be affected by data quality issues."
   },
   {
     "objectID": "lab/lab1/lab1.html#learning-objectives",

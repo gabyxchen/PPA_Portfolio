@@ -52,13 +52,17 @@ If there is a special character like a colon, you need use double quote mark so 
 
 ```{r setup}
 # Load required packages (hint: you need tidycensus, tidyverse, and knitr)
+library(tidycensus)
+library(tidyverse)
+library(knitr)
 
 # Set your Census API key
+census_api_key("e2510a23b0c3dba6ac091ea554e6f2605dbde651", install = TRUE, overwrite = TRUE)
 
 # Choose your state for analysis - assign it to a variable called my_state
 ```
 
-**State Selection:** I have chosen **[Your State Name]** for this analysis because: [Brief explanation of why you chose this state]
+**State Selection:** I have chosen **Rhode Island** for this analysis because: I lived in RI for 5 years.
 
 # Part 2: County-Level Resource Assessment
 
@@ -77,11 +81,18 @@ If there is a special character like a colon, you need use double quote mark so 
 
 ```{r county-data}
 # Write your get_acs() code here
+acs2022 <- get_acs(geography = "county", variables = c(totpop = "B01003_001", medinc = "B19013_001"),
+        state = "RI", survey = "acs5", year = 2022, output = "wide")
 
 # Clean the county names to remove state name and "County" 
 # Hint: use mutate() with str_remove()
+acs2022_clean <- acs2022 %>%
+  mutate(
+    county_name = str_remove(NAME, " County, Rhode Island")
+  )
 
 # Display the first few rows
+head(acs2022_clean)
 ```
 
 ## 2.2 Data Quality Assessment

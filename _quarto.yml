@@ -19,7 +19,7 @@ website:
           - href: lab/lab0/lab0.qmd
             text: "Lab 0: Getting Started with dply"
           - href: lab/lab1/lab1.qmd
-            text: "Lab 1: Census Data Quality for Policy Decisions"
+            text: "Lab 1: Census Data Exploration"
 
 format:
   html:
