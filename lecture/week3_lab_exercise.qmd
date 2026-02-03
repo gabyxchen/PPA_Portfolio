@@ -308,6 +308,44 @@ and identify outliers.
 -   Create a boxplot to identify population outliers
 -   Find and list the 3 most populous and 3 least populous counties
 
+```{r}
+ggplot(county_data) +
+  aes(x = total_popE) +
+  geom_histogram(bins = 10, fill = "purple", alpha = 0.7) +
+  labs(
+    title = "Distribution of Total Population",
+    x = "Total Population",
+    y = "Number of Counties"
+  ) +
+  theme_minimal()
+```
+```{r}
+# Box plot to see outliers clearly
+ggplot(county_data) +
+  aes(y = total_popE) +
+  geom_boxplot(fill = "purple", width = 0.5) +
+  labs(
+    title = "Total Population Distribution with Outliers",
+    y = "Total Population"
+  ) +
+  theme_minimal() +
+  scale_y_continuous()
+
+# Identify the outlier counties
+pop_outliers <- county_data %>%
+  mutate(
+    Q1 = quantile(total_popE, 0.25, na.rm = TRUE),
+    Q3 = quantile(total_popE, 0.75, na.rm = TRUE),
+    IQR = Q3 - Q1,
+    outlier = total_popE < (Q1 - 1.5 * IQR) | total_popE > (Q3 + 1.5 * IQR)
+  ) %>%
+  filter(outlier) %>%
+  select(county_name, total_popE)
+
+print("Outlier counties:")
+pop_outliers
+```
+
 ------------------------------------------------------------------------
 
 ## Exercise 2: Two Variable Relationships
@@ -397,6 +435,23 @@ income using different visualization techniques.
 -   Format the y-axis with dollar signs
 -   Add a title that mentions both variables
 
+```{r}
+# Enhanced scatter plot with trend line
+ggplot(county_data) +
+  aes(x = median_ageE, y = median_incomeE) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  labs(
+    title = "Median Age vs Median Income in Pennsylvania Counties",
+    subtitle = "2018-2022 ACS 5-Year Estimates",
+    x = "Median Age",
+    y = "Median Household Income ($)",
+    caption = "Source: U.S. Census Bureau"
+  ) +
+  theme_dark() +
+  scale_x_continuous(labels = comma) +
+  scale_y_continuous()
+```
 ------------------------------------------------------------------------
 
 ## Exercise 3: Data Quality Visualization 
@@ -470,6 +525,23 @@ using `geom_hline()` with a blue dashed line
 - Use `theme_classic()`instead of `theme_minimal()` 
 - Create a boxplot comparing age MOE across the three population categories
 
+```{r}
+# Add a age_MOE__percentage column calculation
+county_reliability <- county_reliability %>%
+  mutate(age_MOE_percentage = median_ageM / median_ageE * 100)
+
+# Box plots by population category
+ggplot(county_reliability) +
+  aes(x = total_popE , y = age_, fill = pop_category) +
+  geom_boxplot() +
+  labs(
+    title = "Data Reliability by County Size Category",
+    x = "Population Category",
+    y = "Margin of Error (%)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")  # Remove legend since x-axis is clear
+```
 ------------------------------------------------------------------------
 
 ## Exercise 4: Multiple Variables with Color and Faceting 
