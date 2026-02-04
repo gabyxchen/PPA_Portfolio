@@ -532,14 +532,14 @@ county_reliability <- county_reliability %>%
 
 # Box plots by population category
 ggplot(county_reliability) +
-  aes(x = total_popE , y = age_, fill = pop_category) +
+  aes(x = total_popE, y = age_MOE_percentage, fill = total_popE) +
   geom_boxplot() +
   labs(
-    title = "Data Reliability by County Size Category",
-    x = "Population Category",
+    title = "Data Reliability by Population Size Category",
+    x = "Total Population",
     y = "Margin of Error (%)"
   ) +
-  theme_minimal() +
+  theme_classic() +
   theme(legend.position = "none")  # Remove legend since x-axis is clear
 ```
 ------------------------------------------------------------------------
