@@ -5,15 +5,21 @@ editor: visual
 ---
 
 ## Key Concepts Learned
-  - How to create a portfolio using template
-  - How to create a repository on GitHub
-  - How to push and pull between GitHub and GitHub Desktop
-  
+
+-   How to create a portfolio using template
+-   How to create a repository on GitHub
+-   How to push and pull between GitHub and GitHub Desktop
+
 ## Coding Techniques
-  - Quarto and render
+
+-   Quarto and render
 
 ## Questions & Challenges
-  - Setting up weekly notes
-  - What is the relationship and difference between yml and qmd
-  - How to change yml file to correctly linked files in the menu bar
----
+
+-   Setting up weekly notes
+
+-   What is the relationship and difference between yml and qmd
+
+-   
+
+    ## How to change yml file to correctly linked files in the menu bar
