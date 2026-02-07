@@ -218,7 +218,7 @@ pa_data <- get_acs(
 
 # Calculate percentage of each group using mutate()
 # Create percentages for white, Black, and Hispanic populations
-pa_data <- pa_data %>%
+pct_race <- pa_data %>%
   mutate(
     pct_white = round(whiteE / totpopE, 3) * 100,
     pct_black = round(blackE / totpopE, 3) * 100,
@@ -226,7 +226,7 @@ pa_data <- pa_data %>%
   )
 
 # Add readable tract and county name columns using str_extract() or similar
-pa_data <- pa_data %>%
+pct_race_clean <- pct_race %>%
   mutate(
     TRACT = str_extract(NAME, "\\d+.?\\d+" ),
     COUNTY = str_extract(NAME, "(?<=;)\\s[^ ]+")
@@ -240,13 +240,13 @@ pa_data <- pa_data %>%
 ```{r demographic-analysis}
 # Find the tract with the highest percentage of Hispanic/Latino residents
 # Hint: use arrange() and slice() to get the top tract
-pa_data %>%
+pct_race_clean %>%
   arrange(desc(pct_his_lat)) %>%
   slice(1)
 
 # Calculate average demographics by county using group_by() and summarize()
 # Show: number of tracts, average percentage for each racial/ethnic group
-pa_data %>%
+pct_race_clean %>%
   group_by(COUNTY) %>%
   summarize(
     n_tracts = n(),
@@ -282,17 +282,29 @@ kable(col.names = c(
 ```{r demographic-moe}
 # Calculate MOE percentages for white, Black, and Hispanic variables
 # Hint: use the same formula as before (margin/estimate * 100)
-pa_data %>%
+pct_race_clean <- pct_race_clean %>%
   mutate(
-    MOE_white = round(whiteM / whiteE, 3) * 100,
-    MOE_black = round(blackM / blackE, 3) * 100,
-    MOE_his_lat = round(his_latM / his_latE, 3) * 100
-  )
+    MOE_white = round(whiteM / whiteE * 100, 2),
+    MOE_black = round(blackM / blackE * 100, 2),
+    MOE_his_lat = round(his_latM / his_latE * 100, 2)
+  ) 
 
 # Create a flag for tracts with high MOE on any demographic variable
 # Use logical operators (| for OR) in an ifelse() statement
+flag_tract <- pct_race_clean %>%
+  mutate(
+    MOE_issue = if_else(
+      MOE_white > 15 | MOE_black > 15 | MOE_his_lat > 15,
+      TRUE,
+      FALSE
+    )
+  )
 
 # Create summary statistics showing how many tracts have data quality issues
+flag_tract %>%
+  summarise(
+    tracts_with_MOE_issues = sum(MOE_issue, na.rm = TRUE)
+  )
 ```
 
 ## 4.2 Pattern Analysis
@@ -301,11 +313,39 @@ pa_data %>%
 
 ```{r pattern-analysis}
 # Group tracts by whether they have high MOE issues
+# Categorize MOE > 100 as "high", MOE <= 100 as "low"
+flag_tract <- flag_tract %>%
+  mutate(
+    MOE_category = case_when(
+      MOE_white > 100 | MOE_black > 100 | MOE_his_lat > 100 ~ "high",
+      MOE_white <= 100 | MOE_black <= 100 | MOE_his_lat <= 100 ~ "low",
+    )
+  )
+
 # Calculate average characteristics for each group:
 # - population size, demographic percentages
-
 # Use group_by() and summarize() to create this comparison
+flag_tract %>%
+group_by(MOE_category) %>%
+summarise(
+  avg_pop = mean(totpopE, na.rm = TRUE),
+  avg_pct_white = mean(pct_white, na.rm = TRUE),
+  avg_pct_black = mean(pct_black, na.rm = TRUE),
+  avg_pct_hispanic = mean(pct_his_lat, na.rm = TRUE)
+) %>%
+
 # Create a professional table showing the patterns
+kable(
+  col.names = c(
+    "MOE Issue Category",
+    "Average Population Size",
+    "Average percentage of white population (%)",
+    "Average percentage of black population (%)",
+    "Average percentage of hispanic or latino population (%)"
+  ),
+  caption = "Average Demographic Characteristics for Tracts with Different Levels of MOE Issues"
+)
+
 ```
 
 **Pattern Analysis:** [Describe any patterns you observe. Do certain types of communities have less reliable data? What might explain this?]
