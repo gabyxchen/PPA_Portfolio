@@ -177,7 +177,8 @@ kable(col.names = c(
 # Use filter() to select 2-3 counties from your county_reliability data
 # Store the selected counties in a variable called selected_counties
 selected_counties <- pa_reliability %>%
-  filter(moe_percentage > 8)
+  filter(moe_percentage > 9.5 |
+  moe_percentage > 4.8 & moe_percentage < 5)
 
 # Display the selected counties with their key characteristics
 # Show: county name, median income, MOE percentage, reliability category
@@ -185,7 +186,7 @@ print(selected_counties) %>%
 select(county_name, medincE, moe_percentage, reliability)
 ```
 
-**Comment on the output:** [Using filter() to select a certain number of observations requires you to have a basic understanding of your data frame.]
+**Comment on the output:** [Using filter() to select a certain number of observations requires you to have a basic understanding of your data frame.One county with the highest MOE percentage is selected from each reliability group.]
 
 ## 3.2 Tract-Level Demographics
 
@@ -328,10 +329,10 @@ flag_tract <- flag_tract %>%
 flag_tract %>%
 group_by(MOE_category) %>%
 summarise(
-  avg_pop = mean(totpopE, na.rm = TRUE),
-  avg_pct_white = mean(pct_white, na.rm = TRUE),
-  avg_pct_black = mean(pct_black, na.rm = TRUE),
-  avg_pct_hispanic = mean(pct_his_lat, na.rm = TRUE)
+  avg_pop = round(mean(totpopE, na.rm = TRUE), 0),
+  avg_pct_white = round(mean(pct_white, na.rm = TRUE), 1),
+  avg_pct_black = round(mean(pct_black, na.rm = TRUE), 1),
+  avg_pct_hispanic = round(mean(pct_his_lat, na.rm = TRUE), 1)
 ) %>%
 
 # Create a professional table showing the patterns
@@ -348,7 +349,7 @@ kable(
 
 ```
 
-**Pattern Analysis:** [Describe any patterns you observe. Do certain types of communities have less reliable data? What might explain this?]
+**Pattern Analysis:** [Tracts with high MOE issues have a smaller population size and more demographically homogeneous, with a larger share of white presence and smaller share of black and hispanic or latino population. Tracts with smaller population size have smaller survey samples. More homogeneous tracts have limited variation across demographic categories. Both of the cases increase statistical uncertainty and inflate margins of error.]
 
 
 # Part 5: Policy Recommendations
