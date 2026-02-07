@@ -185,7 +185,7 @@ print(selected_counties) %>%
 select(county_name, medincE, moe_percentage, reliability)
 ```
 
-**Comment on the output:** [Using filter() to select a certain number of observations requires you to have a basic understangding of your dataframe.]
+**Comment on the output:** [Using filter() to select a certain number of observations requires you to have a basic understanding of your data frame.]
 
 ## 3.2 Tract-Level Demographics
 
@@ -210,7 +210,7 @@ race_vars <- c(
 pa_data <- get_acs(
   geography = "tract",
   variables = race_vars,
-  state = "PA",
+  state = "42",
   year = 2022,
   output = "wide"
 )
@@ -220,14 +220,17 @@ pa_data <- get_acs(
 # Create percentages for white, Black, and Hispanic populations
 pa_data <- pa_data %>%
   mutate(
-    pct_white = (whiteE / totpopE) * 100,
-    pct_black = (blackE / totpopE) * 100,
-    pct_his_lat = (his_latE / totpopE) * 100
+    pct_white = round(whiteE / totpopE, 3) * 100,
+    pct_black = round(blackE / totpopE, 3) * 100,
+    pct_his_lat = round(his_latE / totpopE, 3) * 100
   )
 
 # Add readable tract and county name columns using str_extract() or similar
 pa_data <- pa_data %>%
-  mutate(name_clean, str_extract(NAME, "^Census Tract" ))
+  mutate(
+    TRACT = str_extract(NAME, "\\d+.?\\d+" ),
+    COUNTY = str_extract(NAME, "(?<=;)\\s[^ ]+")
+    )
 ```
 
 ## 3.3 Demographic Analysis
@@ -237,11 +240,32 @@ pa_data <- pa_data %>%
 ```{r demographic-analysis}
 # Find the tract with the highest percentage of Hispanic/Latino residents
 # Hint: use arrange() and slice() to get the top tract
+pa_data %>%
+  arrange(desc(pct_his_lat)) %>%
+  slice(1)
 
 # Calculate average demographics by county using group_by() and summarize()
 # Show: number of tracts, average percentage for each racial/ethnic group
+pa_data %>%
+  group_by(COUNTY) %>%
+  summarize(
+    n_tracts = n(),
+    pct_white = round(mean(pct_white, na.rm = TRUE), 1),
+    pct_black = round(mean(pct_black, na.rm = TRUE), 1),
+    pct_his_lat = round(mean(pct_his_lat, na.rm = TRUE), 1)
+  ) %>%
 
 # Create a nicely formatted table of your results using kable()
+kable(col.names = c(
+  "County", 
+  "Number of Tracts", 
+  "Percent of White Residents (%)", 
+  "Percent of Black Residents (%)", 
+  "Percent of Hispanic or Latino Residents (%)"
+  ),
+  caption = "Average Demographis by County"
+  )
+
 ```
 
 # Part 4: Comprehensive Data Quality Evaluation
@@ -258,6 +282,12 @@ pa_data <- pa_data %>%
 ```{r demographic-moe}
 # Calculate MOE percentages for white, Black, and Hispanic variables
 # Hint: use the same formula as before (margin/estimate * 100)
+pa_data %>%
+  mutate(
+    MOE_white = round(whiteM / whiteE, 3) * 100,
+    MOE_black = round(blackM / blackE, 3) * 100,
+    MOE_his_lat = round(his_latM / his_latE, 3) * 100
+  )
 
 # Create a flag for tracts with high MOE on any demographic variable
 # Use logical operators (| for OR) in an ifelse() statement
