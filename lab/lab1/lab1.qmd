@@ -208,18 +208,20 @@ race_vars <- c(
   totpop = "B03002_001" # total population
 )
 # Use get_acs() to retrieve tract-level data
-pa_data <- get_acs(
+tract_data <- get_acs(
   geography = "tract",
   variables = race_vars,
-  state = "42",
+  state = "PA",
+  county = c("42053","42103"),
   year = 2022,
+  survey = "acs5",
   output = "wide"
 )
 # Hint: You may need to specify county codes in the county parameter
 
 # Calculate percentage of each group using mutate()
 # Create percentages for white, Black, and Hispanic populations
-pct_race <- pa_data %>%
+pct_race <- tract_data %>%
   mutate(
     pct_white = round(whiteE / totpopE, 3) * 100,
     pct_black = round(blackE / totpopE, 3) * 100,
