@@ -108,7 +108,15 @@ head(income_concept)
 
 **Your Task:** Find median age variables.
 
-\[write the code below - first add a code chunk\]
+```{r}
+# Search for Age variables
+age_vars <- acs_vars_2022 %>%
+  filter(str_detect(label, "[Mm]edian age"))
+
+print("Age variables:")
+head(age_vars)
+
+```
 
 ### 0.5 Advanced Search Techniques
 
@@ -238,7 +246,7 @@ county_data <- get_acs(
 
 # Clean county names
 county_data <- county_data %>%
-  mutate(county_name = str_remove(NAME, paste0(", ", state_choice)))
+  mutate(county_name = str_remove(NAME, paste0(", ", "Pennsylvania")))
 
 # Basic inspection
 glimpse(county_data)
@@ -529,10 +537,26 @@ using `geom_hline()` with a blue dashed line
 # Add a age_MOE__percentage column calculation
 county_reliability <- county_reliability %>%
   mutate(age_MOE_percentage = median_ageM / median_ageE * 100)
+# Scatter plot
+ggplot(data = county_reliability, 
+       aes(x = total_popE, 
+           y = age_MOE_percentage)) +
+  geom_point(color = "purple", size = 2) +
+  geom_hline(yintercept = 5, 
+             color = "blue", 
+             linetype = "dashed") +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  scale_x_continuous(labels = comma)
+  labs(
+    title = "Data Reliability by Population Size",
+    x = "Total Population",
+    y = "Margin of Error (%)"
+  ) +
+  theme_classic()
 
 # Box plots by population category
 ggplot(county_reliability) +
-  aes(x = total_popE, y = age_MOE_percentage, fill = total_popE) +
+  aes(x = pop_category, y = age_MOE_percentage, fill = pop_category) +
   geom_boxplot() +
   labs(
     title = "Data Reliability by Population Size Category",
@@ -613,6 +637,31 @@ by age profile?
 - Facet by income category using `facet_wrap()` 
 - Use `theme_bw()` theme
 
+```{r}
+# Create income categories and faceted plot
+county_faceted <- county_data %>%
+  mutate(
+    income_category = case_when(
+      median_incomeE < 60000 ~ "Low (< 60000)",
+      median_incomeE < 75000 ~ "Medium (60000-75000)",
+      TRUE ~ "High (75000+)"
+    )
+  )
+
+ggplot(county_faceted) +
+  aes(x = total_popE, y = median_ageE) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~income_category) +
+  labs(
+    title = "Population-Age Relationship by Median Income",
+    x = "Total Population",
+    y = "Median Age"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(labels = comma)
+
+```
 ------------------------------------------------------------------------
 
 ## Exercise 5: Data Joins and Integration 
@@ -636,7 +685,7 @@ education_data <- get_acs(
 ) %>%
   mutate(
     pct_college = (bachelor_plusE / total_25plusE) * 100,
-    county_name = str_remove(NAME, paste0(", ", state_choice))
+    county_name = str_remove(NAME, paste0(", ", "Pennsylvania"))
   ) %>%
   select(GEOID, county_name, pct_college)
 
