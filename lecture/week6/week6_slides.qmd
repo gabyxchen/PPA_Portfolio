@@ -1999,11 +1999,11 @@ ggplot(boston.sf, aes(y = SalePrice)) +
 **Each team will share (3 minutes):**
 
 1. **Variables used:**
-   - Structural: ____________
-   - Spatial: ____________
-   - Non-linear: __________
-   - Interactions: ____________
-   - Fixed Effects: Yes/No, how handled sparse categories?
+   - Structural: STYLE
+   - Spatial: DISTANCE TO PUBLIC SCHOOL
+   - Non-linear: SQ FOOTAGE
+   - Interactions: SQ FOOTAGE ~ DISTANCE TO PUBLIC SCHOOL
+   - Fixed Effects: Yes/No, how handled sparse categories? NEIGHBORHOOD
 
 2. **Final cross-validated RMSE:** $____________ and **MAE** $______________
 
@@ -2055,4 +2055,8 @@ ggplot(boston.sf, aes(y = SalePrice)) +
 :::
 
 ---
+```{r}
 
+
+
+```
