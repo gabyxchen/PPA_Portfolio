@@ -17,6 +17,8 @@ website:
             text: "Lab 1: Census Data Exploration"
           - href: lab/lab2/lab2.qmd
             text: "Lab 2: Spatial Analysis and Visualization"
+          - href: lab/Midterm_2026.qmd
+            text: "Midterm Challenge: Philadelphia Housing Price Prediction"
 
 
 format:
