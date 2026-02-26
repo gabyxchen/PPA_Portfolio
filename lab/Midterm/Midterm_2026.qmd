@@ -131,7 +131,61 @@ This dataset contains actual property sales with:
 **Required:** Browse the OpenPhily Data portal and use Census Data to incorporate spatial features into your model.
 
 **Your task:** Think like an urban planner. What location factors matter for housing prices in Philadelphia?
+```{r, echo=FALSE}
+#| message: false
+#| warning: false
+#| results: 'hide'
 
+library(sf)
+library(tigris)
+library(tidycensus)
+library(tidyverse)
+
+# Load Property Sales Dataset
+sales_raw <- st_read("C:/Users/Gab/OneDrive/Documents/SPRING 2026/CPLN5920_PPA/PPA_Portfolio/lab/Midterm/opa_properties_public.csv")
+
+# Convert date
+sales_clean <- sales_raw %>%
+  mutate(
+    sale_date = as.Date(sale_date),
+    sale_year = year(sale_date)
+  )
+
+# Remove outliers
+sales_clean <- sales_clean %>%
+  filter(
+    sale_price > 10000,        # remove extremely low prices
+    sale_price < 5000000,      # remove extreme luxury outliers
+  )
+
+# Filter to residential only
+sales_clean <- sales_clean %>%
+  filter(
+    grepl("1", category_code)
+  )
+
+# Filter to 2023-2025 only
+sales_clean <- sales_clean %>%
+  filter(sale_year >= 2023, sale_year <= 2025)
+
+# Remove missing key fields
+sales_clean <- sales_clean %>%
+  drop_na(
+    sale_price,
+    total_livable_area,
+    number_of_bedrooms,
+    number_of_bathrooms,
+    location
+  )
+# Save cleaned dataset
+saveRDS(sales_clean, "C:/Users/Gab/OneDrive/Documents/SPRING 2026/CPLN5920_PPA/PPA_Portfolio/lab/Midterm/sales_clean.rds")
+
+# Load cleaned dataset
+sales_clean <- readRDS("C:/Users/Gab/OneDrive/Documents/SPRING 2026/CPLN5920_PPA/PPA_Portfolio/lab/Midterm/sales_clean.rds")
+
+# Load secondary data
+
+```
 ---
 
 ## Assignment Structure
