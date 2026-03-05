@@ -131,61 +131,7 @@ This dataset contains actual property sales with:
 **Required:** Browse the OpenPhily Data portal and use Census Data to incorporate spatial features into your model.
 
 **Your task:** Think like an urban planner. What location factors matter for housing prices in Philadelphia?
-```{r, echo=FALSE}
-#| message: false
-#| warning: false
-#| results: 'hide'
 
-library(sf)
-library(tigris)
-library(tidycensus)
-library(tidyverse)
-
-# Load Property Sales Dataset
-sales_raw <- st_read("C:/Users/Gab/OneDrive/Documents/SPRING 2026/CPLN5920_PPA/PPA_Portfolio/lab/Midterm/opa_properties_public.csv")
-
-# Convert date
-sales_clean <- sales_raw %>%
-  mutate(
-    sale_date = as.Date(sale_date),
-    sale_year = year(sale_date)
-  )
-
-# Remove outliers
-sales_clean <- sales_clean %>%
-  filter(
-    sale_price > 10000,        # remove extremely low prices
-    sale_price < 5000000,      # remove extreme luxury outliers
-  )
-
-# Filter to residential only
-sales_clean <- sales_clean %>%
-  filter(
-    grepl("1", category_code)
-  )
-
-# Filter to 2023-2025 only
-sales_clean <- sales_clean %>%
-  filter(sale_year >= 2023, sale_year <= 2025)
-
-# Remove missing key fields
-sales_clean <- sales_clean %>%
-  drop_na(
-    sale_price,
-    total_livable_area,
-    number_of_bedrooms,
-    number_of_bathrooms,
-    location
-  )
-# Save cleaned dataset
-saveRDS(sales_clean, "C:/Users/Gab/OneDrive/Documents/SPRING 2026/CPLN5920_PPA/PPA_Portfolio/lab/Midterm/sales_clean.rds")
-
-# Load cleaned dataset
-sales_clean <- readRDS("C:/Users/Gab/OneDrive/Documents/SPRING 2026/CPLN5920_PPA/PPA_Portfolio/lab/Midterm/sales_clean.rds")
-
-# Load secondary data
-
-```
 ---
 
 ## Assignment Structure
@@ -214,6 +160,183 @@ Your work should follow this workflow, with results split between presentation a
 - Summary tables showing before/after dimensions
 - Narrative explaining decisions
 
+```{r}
+library(sf)
+library(tigris)
+library(tidycensus)
+library(tidyverse)
+
+# Load Property Sales Dataset
+sales_raw <- st_read("opa_properties_public.geojson")
+
+# Convert date
+sales_clean <- sales_raw %>%
+  mutate(
+    sale_date = as.Date(sale_date),
+    sale_year = year(sale_date)
+  )
+
+# Remove outliers
+sales_clean <- sales_clean %>%
+  filter(
+    sale_price > 10000,        # remove extremely low prices
+    sale_price < 5000000,      # remove extreme luxury outliers
+  )
+
+# Remove missing key fields
+sales_clean <- sales_clean %>%
+  drop_na(
+    sale_price,
+    total_livable_area,
+    number_of_bedrooms,
+    number_of_bathrooms,
+  )
+
+# Select necessary rows
+sales_clean <- sales_clean %>%
+  select(
+    category_code,
+    category_code_description,
+    garage_spaces,
+    number_of_bathrooms,
+    number_of_bedrooms,
+    number_stories,
+    total_livable_area,
+    year_built,
+    sale_year,
+    sale_price,
+    geometry
+  )
+
+# Filter to residential only
+sales_clean <- sales_clean %>%
+  filter(
+    grepl("1", category_code)
+  )
+
+# Filter to 2023-2025 only
+sales_clean <- sales_clean %>%
+  filter(sale_year >= 2023, sale_year <= 2024)
+
+
+# Save cleaned dataset
+saveRDS(sales_clean, "sales_clean.rds")
+
+# Summary table showing before and after
+tibble(
+  Stage = c("Raw", "Cleaned"),
+  N = c(nrow(sales_raw), nrow(sales_clean))
+)
+
+# Load cleaned dataset
+sales_clean <- readRDS("sales_clean.rds")
+
+
+
+
+# Load secondary data on access + socioeconomics + amenities + spacial structure
+# Define ACS variables
+census_vars <- c(
+  med_income      = "B19013_001",   # Median household income
+  med_home_value  = "B25077_001",   # Median home value
+  
+  total_pop       = "B01003_001",   # Total population
+  poverty_count   = "B17001_002",   # Below poverty
+  poverty_total   = "B17001_001",   # Poverty universe
+  
+  total_edu       = "B15003_001",   # Education total
+  edu_bachelors   = "B15003_022",   # Bachelor's
+  edu_masters     = "B15003_023",
+  edu_prof        = "B15003_024",
+  edu_phd         = "B15003_025",
+  
+  tenure_total    = "B25003_001",   # Total occupied
+  owner_occupied  = "B25003_002"    # Owner occupied
+)
+
+# Pull census data
+phl_census <- get_acs(
+  geography = "tract",
+  variables = census_vars,
+  state = "PA",
+  county = "Philadelphia",
+  year = 2024,
+  survey = "acs5",
+  geometry = TRUE
+)
+
+# Reshape and Mutate
+phl_census_wide <- phl_census %>%
+  select(GEOID, NAME, variable, estimate, geometry) %>% # Drop MOE
+  pivot_wider(names_from = variable, values_from = estimate) %>% # Pivot to wide table
+  mutate(
+    # % College educated (Bachelor’s and above)
+    pct_college = (
+      edu_bachelors + edu_masters + edu_prof + edu_phd
+    ) / total_edu,
+    
+    # Poverty rate
+    poverty_rate = poverty_count / poverty_total,
+    
+    # % Owner occupied
+    pct_owner_occ = owner_occupied / tenure_total
+  ) %>%
+  select(
+    GEOID,
+    med_income,
+    med_home_value,
+    pct_college,
+    poverty_rate,
+    pct_owner_occ,
+    geometry
+  ) %>%
+  drop_na(
+    med_income,
+    med_home_value,
+    pct_college,
+    poverty_rate,
+    pct_owner_occ
+  )
+
+# Transit data on SEPTA bus/subways stops and regional rail stations: https://opendataphilly.org/datasets/septa-routes-stops-locations/
+stops <- st_read("Transit_Stops_(Spring_2025)/Transit_Stops_(Spring_2025).shp")
+
+# Parks/Green Space: https://opendataphilly.org/datasets/ppr-properties/
+parks <- st_read("PPR_Properties/PPR_Properties.shp")
+
+# Distance to Center City (anchor to city hall)
+city_hall <- st_as_sf(
+  data.frame(
+    name = "City Hall",
+    lon = -75.1636,
+    lat = 39.9526
+  ),
+  coords = c("lon", "lat"),
+  crs = 4326
+)
+
+# Schools: https://opendataphilly.org/datasets/schools/
+schools <- st_read("Schools/Schools.shp")
+
+# Convert sales data to sf
+sales_sf <- st_as_sf(
+  sales_clean,
+  coords = c("longitude", "latitude"),
+  crs = 4326
+)
+
+# Match CRS to NAD83 Pennsylvania South (feet), 2272
+sales_sf <- st_transform(sales_sf, 2272)
+phl_census_wide <- st_transform(phl_census_wide, 2272)
+stops  <- st_transform(stops, 2272)
+parks  <- st_transform(parks, 2272)
+city_hall <- st_transform(city_hall, 2272)
+schools <- st_transform(schools, 2272)
+
+# Join census data to sales_clean
+sales_sf <- st_join(sales_sf, phl_census_wide)
+
+```
 ---
 
 ### Phase 2: Exploratory Data Analysis
@@ -241,6 +364,165 @@ Your work should follow this workflow, with results split between presentation a
 - Center City and University City command premium prices
 - River wards show emerging appreciation
 - Northeast Philadelphia remains most affordable
+```
+
+```{r}
+options(tigris_use_cache = TRUE)
+options(tigris_progress = FALSE)
+
+# 1 Distribution of sale prices (histogram)
+library(ggplot2)
+
+ggplot(sales_sf, aes(x = sale_price)) +
+  geom_histogram(bins = 50) +
+  scale_x_continuous(labels = scales::dollar) +
+  labs(
+    title = "Distribution of Sale Prices (Raw)",
+    x = "Sale Price",
+    y = "Count"
+  )
+
+# Log sale price
+sales_sf <- sales_sf %>%
+  mutate(
+    log_price = log(sale_price)
+  )
+
+# 1 Distribution of log sale prices (histogram)
+ggplot(sales_sf, aes(x = log_price)) +
+  geom_histogram(bins = 50) +
+  labs( 
+    title = "Distribution of Log Sale Prices",
+    x = "Log(Sale Price)",
+    y = "Count"
+  )
+
+# Interpretation: Raw prices are heavily right-skewed, meaning there are a lot of expensive outliers in our housing sale price data. Log transformation produces a more symmetric distribution suitable for regression modeling.
+
+# 2 Geographic distribution (map)
+ggplot(sales_sf) +
+  geom_sf(aes(color = log_price)) +
+  scale_color_viridis_c() +
+  labs(title = "Spatial Distribution of Home Prices (Log Scale)")+
+  theme_minimal()
+# Interpretation: Home prices exhibit strong spatial clustering across Philadelphia.Higher-priced properties concentrate in Center CIty and Northwest neighborhoods, while lower-priced homes are more prevalent in North and West Philadelphia.
+
+# 3 Price v. structural features (scatter plots)
+# 3 Price v. total livable area
+ggplot(sales_sf, aes(total_livable_area, log_price)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(method = "loess") +
+  labs(
+    title = "Sale Price vs. Living Area",
+    x = "Living Area (sq ft)",
+    y = "Log(Sale Price)"
+  )
+
+# 4 Price v. spatial feature (scatter plots)
+# 4 Price v. distance to downtown
+sales_sf <- sales_sf %>%
+  mutate(
+    dist_downtown_ft = as.numeric(st_distance(geometry, city_hall)),
+    dist_downtown_mi = dist_downtown_ft / 5280
+  ) # Calculate distance to city hall
+
+ggplot(sales_sf, aes(dist_downtown_mi, log_price)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth() +
+  labs(
+    title = "Price Gradient from Center City",
+    x = "Distance to City Hall (miles)",
+    y = "Log(Sale Price)"
+  )
+# Interpretation: The relationship between distance to City Hall and log sale price is nonlinear. Prices decline sharply within the first 2-4 miles from city hall, but begin to recover in outer neighborhoods.
+
+# 4 Price v. spatial features (scatter plots)
+# 4 Price v. distance to transit stops
+stops_dist <- st_distance(sales_sf, stops) # Calculate distance to transit stops
+
+get_knn_distance <- function(stops_dist, k) {
+  apply(stops_dist, 1, function(distances){
+    mean(as.numeric(sort(distances)[1:k]))
+  })
+} # Create function
+
+sales_sf <- sales_sf %>%
+  mutate(
+    stops_nn1 = get_knn_distance(stops_dist, k= 1),
+    stops_nn3 = get_knn_distance(stops_dist, k= 3),
+    stops_nn5 = get_knn_distance(stops_dist, k= 5)
+  ) # Create features
+
+ggplot(sales_sf, aes(stops_nn1, log_price)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth() +
+  labs(
+    title = "Price Gradient from Nearest Transit Stops",
+    x = "Distance to Transit Stops (feet)",
+    y = "Log(Sale Price)"
+  )
+# Interpretation: The relationship between distance to the nearest transit stop and sale price is nonlinear. Properties located extremely close to transit exhibit slightly lower prices, potentially reflecting noise or traffic externalities. Prices increase within a moderate walking distance range (500-1500ft), suggesting an accessibility premium. The relationship becomes unstable beyond 2000 ft due to limited observations.
+
+# 4 Price v. distance to schools
+schools_dist <- st_distance(sales_sf, schools) # Calculate distance to schools
+
+get_knn_distance <- function(schools_dist, k) {
+  apply(schools_dist, 1, function(distances){
+    mean(as.numeric(sort(distances)[1:k]))
+  })
+} # Create function
+
+sales_sf <- sales_sf %>%
+  mutate(
+    schools_nn1 = get_knn_distance(schools_dist, k= 1),
+    schools_nn3 = get_knn_distance(schools_dist, k= 3),
+    schools_nn5 = get_knn_distance(schools_dist, k= 5)
+  ) # Create features
+
+ggplot(sales_sf, aes(schools_nn1, log_price)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth() +
+  labs(
+    title = "Price Gradient from Nearest Schools",
+    x = "Distance to Schools (feet)",
+    y = "Log(Sale Price)"
+  )
+# Interpretation: The relationship between distance to the nearest schools and sale price is relatively weak and nonlinear. Properties immediately adjacent to schools do not exhibit a strong premium. Moderate proximity (2000-4000ft) is associated with slightly higher prices.
+
+# 4 Price v. distance to parks
+parks_dist <- st_distance(sales_sf, parks) # Calculate distance to parks
+
+get_knn_distance <- function(parks_dist, k) {
+  apply(parks_dist, 1, function(distances){
+    mean(as.numeric(sort(distances)[1:k]))
+  })
+} # Create function
+
+sales_sf <- sales_sf %>%
+  mutate(
+    parks_nn1 = get_knn_distance(parks_dist, k= 1),
+    parks_nn3 = get_knn_distance(parks_dist, k= 3),
+    parks_nn5 = get_knn_distance(parks_dist, k= 5)
+  ) # Create features
+
+ggplot(sales_sf, aes(parks_nn1, log_price)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth() +
+  labs(
+    title = "Price Gradient from Nearest Parks",
+    x = "Distance to Parks (feet)",
+    y = "Log(Sale Price)"
+  )
+# Interpretation: The relationship between distance to the nearest park and sale price is weak and nonlinear. Properties immediately adjacent to parks show a small premium, but the advantage flattens quickly beyond 1000ft. This suggests that park proximity may confer localized amenity benefits, but its explanatory power to sale price is limited to external factors.
+
+
+# 5 Price by income quantile
+sales_sf %>%
+  mutate(income_q = ntile(med_income, 4)) %>%
+  ggplot(aes(factor(income_q), log_price)) +
+  geom_boxplot()
+# Interpretation: Sale prices increase monotonically across neighborhood income quartiles. The median log sale price in the highest-income quartile is substantially higher than in the lowest-income quartile, indicating strong neighborhood-level stratification in the housing market.
+
 ```
 
 ---
@@ -273,6 +555,63 @@ Your work should follow this workflow, with results split between presentation a
 - Summary table of features created
 - Brief justification for each feature
 
+```{r}
+#already done (K-nearest)
+# distance to parks
+# distance to schools
+# distance to transit stops
+# distance to center city 
+
+#buffer-based
+# number of parks/schools/transit stops within ____ft
+# crime
+# car crashes
+# hospitals
+# monuments
+
+#census variables
+# income
+# education
+# poverty
+# owner occ
+# % rent burden
+
+#interaction terms
+# 
+
+# Flag homes with number of parks within 500 ft
+sales_sf <- sales_sf %>%
+  mutate(
+    parks_500ft = lengths(st_intersects(
+      st_buffer(geometry, 500),
+      parks
+      )),
+    parks_1000ft = lengths(st_intersects(
+      st_buffer(geometry, 1000),
+      parks
+    ))
+  )
+
+# # Calculate distance to nearest school
+# schools_dist <- st_distance(sales_sf, schools)
+# 
+# get_knn_distance <- function(schools_dist, k) {
+#   apply(schools_dist, 1, function(distances){
+#     mean(as.numeric(sort(distances)[1:k]))
+#   })
+# } # Create function
+# 
+# sales_sf <- sales_sf %>%
+#   mutate(
+#     schools_nn1 = get_knn_distance(schools_dist, k= 1),
+#     schools_nn3 = get_knn_distance(schools_dist, k= 3),
+#     schools_nn5 = get_knn_distance(schools_dist, k= 5)
+#   ) # Create features
+# 
+# summary(sales_sf %>%
+#   st_drop_geometry() %>%
+#   select(starts_with("schools_nn"))) # Summarize results
+```
 ---
 
 ### Phase 4: Model Building
