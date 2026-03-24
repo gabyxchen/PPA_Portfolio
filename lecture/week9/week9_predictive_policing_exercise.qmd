@@ -53,6 +53,7 @@ library(patchwork)      # Plot composition (replaces grid/gridExtra)
 library(knitr)          # Tables
 library(kableExtra)     # Table formatting
 library(classInt)       # Classification intervals
+library(ggplot2)
 
 
 # Spatstat for analyzing point patterns - split into sub-packages
@@ -128,7 +129,7 @@ We're using `ESRI:102271` (Illinois State Plane East, NAD83, US Feet). This is a
 #| message: false
 
 # Load from provided data file (downloaded from Chicago open data portal)
-burglaries <- st_read(here("week9", "burglaries.shp")) %>% 
+burglaries <- st_read(here("lecture/week9", "burglaries.shp")) %>% 
   st_transform('ESRI:102271')
 
 glimpse(burglaries)
@@ -143,7 +144,7 @@ cat("  - Date range:", format(min(burglaries$Date, na.rm = TRUE)), "to",
 
 **Question 1.1:** How many burglaries are in the dataset? What time period does this cover? Why does the coordinate reference system matter for our spatial analysis?
 
-*Your answer here:*
+*Your answer here: 7482; 2017-2018; It allows accurate distance calculations.*
 
 ::: callout-warning
 ## Critical Pause #1: Data Provenance
@@ -207,6 +208,7 @@ p1 + p2 +
 **Question 1.2:** What spatial patterns do you observe? Are burglaries evenly distributed across Chicago? Where are the highest concentrations? What might explain these patterns?
 
 *Your answer here:*
+In 2017, burglaries clustered in both northern and southern Chicago. The highest concentration is in southeast Chicago. There are a lot of possible influences to these patterns, including the policing spatial bias, racial bias, unreported incidents, and trust in police department, etc.
 
 # Part 2: Create Fishnet Grid
 
@@ -244,6 +246,7 @@ cat("  - Cell area:", round(st_area(fishnet[1,])), "square meters\n")
 **Question 2.1:** Why do we use a regular grid instead of existing boundaries like neighborhoods or census tracts? What are the advantages and disadvantages of this approach?
 
 *Your answer here:*
+Fishnet controls the size of the analysis units. The advantags of fishnet approach are that it's a standardized approach in predictive policing and makes the spatial operations easier. The disadvantages are that it is arbitrary, and that it might split existing administrative and natural boundaries.
 
 ## Exercise 2.2: Aggregate Burglaries to Grid
 
@@ -296,6 +299,7 @@ ggplot() +
 **Question 2.2:** What is the distribution of burglary counts across cells? Why do so many cells have zero burglaries? Is this distribution suitable for count regression? (Hint: look up overdispersion)
 
 *Your answer here:*
+There are a lot of zero counts and few high counts. Small cell sizes may increase the number of zero count cells. This distribution is suitable for a count regression model but not a basic Poisson model.
 
 # Part 3: Create a Kernel Density Baseline
 
@@ -357,6 +361,7 @@ ggplot() +
 **Question 3.1:** How does the KDE map compare to the count map? What does KDE capture well? What does it miss?
 
 *Your answer here:*
+KDE map has a much smaller variance than the count map. It captures 
 
 ::: callout-tip
 ## Why Start with KDE?
