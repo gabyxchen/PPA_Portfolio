@@ -128,7 +128,7 @@ We're using `ESRI:102271` (Illinois State Plane East, NAD83, US Feet). This is a
 #| message: false
 
 # Load from provided data file (downloaded from Chicago open data portal)
-burglaries <- st_read(here("data", "burglaries.shp")) %>% 
+burglaries <- st_read(here("week9", "burglaries.shp")) %>% 
   st_transform('ESRI:102271')
 
 glimpse(burglaries)
