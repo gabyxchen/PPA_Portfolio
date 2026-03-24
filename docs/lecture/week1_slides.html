@@ -726,31 +726,21 @@ Allison Lassiter
 </section>
 <section id="live-demo-basic-dplyr" class="slide level2">
 <h2>Live Demo: Basic dplyr</h2>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb16-2"><a></a></span>
-<span id="cb16-3"><a></a><span class="co"># Load car sales data</span></span>
-<span id="cb16-4"><a></a>car_data <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/car_sales_data.csv"</span>)</span>
-<span id="cb16-5"><a></a></span>
-<span id="cb16-6"><a></a><span class="co"># Basic exploration</span></span>
-<span id="cb16-7"><a></a><span class="fu">glimpse</span>(car_data)</span>
-<span id="cb16-8"><a></a><span class="fu">names</span>(car_data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
 </section>
 <section id="data-manipulation-pipeline" class="slide level2">
 <h2>Data Manipulation Pipeline</h2>
 <p><strong>Pipes (<code>%&gt;%</code>) are the magic of dplyr:</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a></a><span class="co"># The power of pipes - read as "then"</span></span>
-<span id="cb17-2"><a></a>car_summary <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
-<span id="cb17-3"><a></a>  <span class="fu">filter</span>(<span class="st">`</span><span class="at">Year of manufacture</span><span class="st">`</span> <span class="sc">&gt;=</span> <span class="dv">2020</span>) <span class="sc">%&gt;%</span>      <span class="co"># Recent models only</span></span>
-<span id="cb17-4"><a></a>  <span class="fu">select</span>(Manufacturer, Model, Price, Mileage) <span class="sc">%&gt;%</span> <span class="co"># Key variables</span></span>
-<span id="cb17-5"><a></a>  <span class="fu">mutate</span>(<span class="at">price_k =</span> Price <span class="sc">/</span> <span class="dv">1000</span>) <span class="sc">%&gt;%</span>             <span class="co"># Convert to thousands</span></span>
-<span id="cb17-6"><a></a>  <span class="fu">filter</span>(Mileage <span class="sc">&lt;</span> <span class="dv">50000</span>) <span class="sc">%&gt;%</span>                    <span class="co"># Low mileage cars</span></span>
-<span id="cb17-7"><a></a>  <span class="fu">group_by</span>(Manufacturer) <span class="sc">%&gt;%</span>                     <span class="co"># Group by brand</span></span>
-<span id="cb17-8"><a></a>  <span class="fu">summarize</span>(                                     <span class="co"># Calculate statistics</span></span>
-<span id="cb17-9"><a></a>    <span class="at">avg_price =</span> <span class="fu">mean</span>(price_k, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb17-10"><a></a>    <span class="at">count =</span> <span class="fu">n</span>()</span>
-<span id="cb17-11"><a></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a></a><span class="co"># The power of pipes - read as "then"</span></span>
+<span id="cb16-2"><a></a>car_summary <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
+<span id="cb16-3"><a></a>  <span class="fu">filter</span>(<span class="st">`</span><span class="at">Year of manufacture</span><span class="st">`</span> <span class="sc">&gt;=</span> <span class="dv">2020</span>) <span class="sc">%&gt;%</span>      <span class="co"># Recent models only</span></span>
+<span id="cb16-4"><a></a>  <span class="fu">select</span>(Manufacturer, Model, Price, Mileage) <span class="sc">%&gt;%</span> <span class="co"># Key variables</span></span>
+<span id="cb16-5"><a></a>  <span class="fu">mutate</span>(<span class="at">price_k =</span> Price <span class="sc">/</span> <span class="dv">1000</span>) <span class="sc">%&gt;%</span>             <span class="co"># Convert to thousands</span></span>
+<span id="cb16-6"><a></a>  <span class="fu">filter</span>(Mileage <span class="sc">&lt;</span> <span class="dv">50000</span>) <span class="sc">%&gt;%</span>                    <span class="co"># Low mileage cars</span></span>
+<span id="cb16-7"><a></a>  <span class="fu">group_by</span>(Manufacturer) <span class="sc">%&gt;%</span>                     <span class="co"># Group by brand</span></span>
+<span id="cb16-8"><a></a>  <span class="fu">summarize</span>(                                     <span class="co"># Calculate statistics</span></span>
+<span id="cb16-9"><a></a>    <span class="at">avg_price =</span> <span class="fu">mean</span>(price_k, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb16-10"><a></a>    <span class="at">count =</span> <span class="fu">n</span>()</span>
+<span id="cb16-11"><a></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="understanding-pipes" class="slide level2">
 <h2>Understanding Pipes</h2>
@@ -761,32 +751,32 @@ Allison Lassiter
 <li>Think: “and then…”</li>
 </ul>
 <p><strong>Without pipes (nested functions):</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a></a><span class="co"># Hard to read - inside out!</span></span>
-<span id="cb18-2"><a></a>car_summary <span class="ot">&lt;-</span> <span class="fu">summarize</span>(</span>
-<span id="cb18-3"><a></a>  <span class="fu">group_by</span>(</span>
-<span id="cb18-4"><a></a>    <span class="fu">filter</span>(</span>
-<span id="cb18-5"><a></a>      <span class="fu">mutate</span>(</span>
-<span id="cb18-6"><a></a>        <span class="fu">select</span>(<span class="fu">filter</span>(data, <span class="st">`</span><span class="at">Year of manufacture</span><span class="st">`</span> <span class="sc">&gt;=</span> <span class="dv">2020</span>), </span>
-<span id="cb18-7"><a></a>               Manufacturer, Model, Price, Mileage),</span>
-<span id="cb18-8"><a></a>        <span class="at">price_k =</span> Price <span class="sc">/</span> <span class="dv">1000</span>),</span>
-<span id="cb18-9"><a></a>      Mileage <span class="sc">&lt;</span> <span class="dv">50000</span>),</span>
-<span id="cb18-10"><a></a>    Manufacturer),</span>
-<span id="cb18-11"><a></a>  <span class="at">avg_price =</span> <span class="fu">mean</span>(price_k, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb18-12"><a></a>  <span class="at">count =</span> <span class="fu">n</span>()</span>
-<span id="cb18-13"><a></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a></a><span class="co"># Hard to read - inside out!</span></span>
+<span id="cb17-2"><a></a>car_summary <span class="ot">&lt;-</span> <span class="fu">summarize</span>(</span>
+<span id="cb17-3"><a></a>  <span class="fu">group_by</span>(</span>
+<span id="cb17-4"><a></a>    <span class="fu">filter</span>(</span>
+<span id="cb17-5"><a></a>      <span class="fu">mutate</span>(</span>
+<span id="cb17-6"><a></a>        <span class="fu">select</span>(<span class="fu">filter</span>(data, <span class="st">`</span><span class="at">Year of manufacture</span><span class="st">`</span> <span class="sc">&gt;=</span> <span class="dv">2020</span>), </span>
+<span id="cb17-7"><a></a>               Manufacturer, Model, Price, Mileage),</span>
+<span id="cb17-8"><a></a>        <span class="at">price_k =</span> Price <span class="sc">/</span> <span class="dv">1000</span>),</span>
+<span id="cb17-9"><a></a>      Mileage <span class="sc">&lt;</span> <span class="dv">50000</span>),</span>
+<span id="cb17-10"><a></a>    Manufacturer),</span>
+<span id="cb17-11"><a></a>  <span class="at">avg_price =</span> <span class="fu">mean</span>(price_k, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb17-12"><a></a>  <span class="at">count =</span> <span class="fu">n</span>()</span>
+<span id="cb17-13"><a></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="without-pipes-multiple-objects" class="slide level2">
 <h2>Without Pipes (Multiple Objects)</h2>
 <p><strong>Alternative: create many intermediate objects</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a></a><span class="co"># Clutters your environment</span></span>
-<span id="cb19-2"><a></a>recent_cars <span class="ot">&lt;-</span> <span class="fu">filter</span>(data, <span class="st">`</span><span class="at">Year of manufacture</span><span class="st">`</span> <span class="sc">&gt;=</span> <span class="dv">2020</span>)</span>
-<span id="cb19-3"><a></a>key_vars <span class="ot">&lt;-</span> <span class="fu">select</span>(recent_cars, Manufacturer, Model, Price, Mileage)</span>
-<span id="cb19-4"><a></a>price_thousands <span class="ot">&lt;-</span> <span class="fu">mutate</span>(key_vars, <span class="at">price_k =</span> Price <span class="sc">/</span> <span class="dv">1000</span>)</span>
-<span id="cb19-5"><a></a>low_mileage <span class="ot">&lt;-</span> <span class="fu">filter</span>(price_thousands, Mileage <span class="sc">&lt;</span> <span class="dv">50000</span>)</span>
-<span id="cb19-6"><a></a>grouped_cars <span class="ot">&lt;-</span> <span class="fu">group_by</span>(low_mileage, Manufacturer)</span>
-<span id="cb19-7"><a></a>car_summary <span class="ot">&lt;-</span> <span class="fu">summarize</span>(grouped_cars, </span>
-<span id="cb19-8"><a></a>                        <span class="at">avg_price =</span> <span class="fu">mean</span>(price_k, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb19-9"><a></a>                        <span class="at">count =</span> <span class="fu">n</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a></a><span class="co"># Clutters your environment</span></span>
+<span id="cb18-2"><a></a>recent_cars <span class="ot">&lt;-</span> <span class="fu">filter</span>(data, <span class="st">`</span><span class="at">Year of manufacture</span><span class="st">`</span> <span class="sc">&gt;=</span> <span class="dv">2020</span>)</span>
+<span id="cb18-3"><a></a>key_vars <span class="ot">&lt;-</span> <span class="fu">select</span>(recent_cars, Manufacturer, Model, Price, Mileage)</span>
+<span id="cb18-4"><a></a>price_thousands <span class="ot">&lt;-</span> <span class="fu">mutate</span>(key_vars, <span class="at">price_k =</span> Price <span class="sc">/</span> <span class="dv">1000</span>)</span>
+<span id="cb18-5"><a></a>low_mileage <span class="ot">&lt;-</span> <span class="fu">filter</span>(price_thousands, Mileage <span class="sc">&lt;</span> <span class="dv">50000</span>)</span>
+<span id="cb18-6"><a></a>grouped_cars <span class="ot">&lt;-</span> <span class="fu">group_by</span>(low_mileage, Manufacturer)</span>
+<span id="cb18-7"><a></a>car_summary <span class="ot">&lt;-</span> <span class="fu">summarize</span>(grouped_cars, </span>
+<span id="cb18-8"><a></a>                        <span class="at">avg_price =</span> <span class="fu">mean</span>(price_k, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb18-9"><a></a>                        <span class="at">count =</span> <span class="fu">n</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p><strong>Problems:</strong> Lots of temporary objects, hard to follow the logic</p>
 </section>
 <section id="why-pipes-are-better" class="slide level2">
@@ -798,11 +788,11 @@ Allison Lassiter
 </section>
 <section id="reading-pipes-aloud" class="slide level2">
 <h2>Reading Pipes Aloud</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a></a>car_data <span class="sc">%&gt;%</span></span>
-<span id="cb20-2"><a></a>  <span class="fu">filter</span>(Price <span class="sc">&gt;</span> <span class="dv">15000</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb20-3"><a></a>  <span class="fu">select</span>(Manufacturer, Price) <span class="sc">%&gt;%</span></span>
-<span id="cb20-4"><a></a>  <span class="fu">group_by</span>(Manufacturer) <span class="sc">%&gt;%</span></span>
-<span id="cb20-5"><a></a>  <span class="fu">summarize</span>(<span class="at">avg_price =</span> <span class="fu">mean</span>(Price))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a></a>car_data <span class="sc">%&gt;%</span></span>
+<span id="cb19-2"><a></a>  <span class="fu">filter</span>(Price <span class="sc">&gt;</span> <span class="dv">15000</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-3"><a></a>  <span class="fu">select</span>(Manufacturer, Price) <span class="sc">%&gt;%</span></span>
+<span id="cb19-4"><a></a>  <span class="fu">group_by</span>(Manufacturer) <span class="sc">%&gt;%</span></span>
+<span id="cb19-5"><a></a>  <span class="fu">summarize</span>(<span class="at">avg_price =</span> <span class="fu">mean</span>(Price))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p><strong>Read as:</strong></p>
 <p>“Take car_data, <strong>then</strong> filter for cars over $15,000, <strong>then</strong> select manufacturer and price columns, <strong>then</strong> group by manufacturer, <strong>then</strong> calculate average price”</p>
 </section>
@@ -816,32 +806,32 @@ Allison Lassiter
 </section>
 <section id="how-group_by-works" class="slide level2">
 <h2>How group_by() Works</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a></a><span class="co"># group_by() doesn't change what you see...</span></span>
-<span id="cb21-2"><a></a>car_data <span class="sc">%&gt;%</span> </span>
-<span id="cb21-3"><a></a>  <span class="fu">group_by</span>(Manufacturer)</span>
-<span id="cb21-4"><a></a></span>
-<span id="cb21-5"><a></a><span class="co"># ...but it sets up invisible grouping for next operations</span></span>
-<span id="cb21-6"><a></a><span class="co"># Look for: "Groups: Manufacturer [5]" in the output</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a></a><span class="co"># group_by() doesn't change what you see...</span></span>
+<span id="cb20-2"><a></a>car_data <span class="sc">%&gt;%</span> </span>
+<span id="cb20-3"><a></a>  <span class="fu">group_by</span>(Manufacturer)</span>
+<span id="cb20-4"><a></a></span>
+<span id="cb20-5"><a></a><span class="co"># ...but it sets up invisible grouping for next operations</span></span>
+<span id="cb20-6"><a></a><span class="co"># Look for: "Groups: Manufacturer [5]" in the output</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p><strong>Key insight:</strong> <code>group_by()</code> <strong>prepares</strong> the data, doesn’t transform it yet</p>
 </section>
 <section id="how-summarize-works" class="slide level2">
 <h2>How summarize() Works</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a></a><span class="co"># Without grouping - one row of results</span></span>
-<span id="cb22-2"><a></a>car_data <span class="sc">%&gt;%</span></span>
-<span id="cb22-3"><a></a>  <span class="fu">summarize</span>(</span>
-<span id="cb22-4"><a></a>    <span class="at">avg_price =</span> <span class="fu">mean</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb22-5"><a></a>    <span class="at">total_cars =</span> <span class="fu">n</span>()</span>
-<span id="cb22-6"><a></a>  )</span>
-<span id="cb22-7"><a></a><span class="co"># Result: 1 row with overall averages</span></span>
-<span id="cb22-8"><a></a></span>
-<span id="cb22-9"><a></a><span class="co"># With grouping - one row per group</span></span>
-<span id="cb22-10"><a></a>car_data <span class="sc">%&gt;%</span></span>
-<span id="cb22-11"><a></a>  <span class="fu">group_by</span>(Manufacturer) <span class="sc">%&gt;%</span></span>
-<span id="cb22-12"><a></a>  <span class="fu">summarize</span>(</span>
-<span id="cb22-13"><a></a>    <span class="at">avg_price =</span> <span class="fu">mean</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb22-14"><a></a>    <span class="at">total_cars =</span> <span class="fu">n</span>()</span>
-<span id="cb22-15"><a></a>  )</span>
-<span id="cb22-16"><a></a><span class="co"># Result: 5 rows (one per manufacturer)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a></a><span class="co"># Without grouping - one row of results</span></span>
+<span id="cb21-2"><a></a>car_data <span class="sc">%&gt;%</span></span>
+<span id="cb21-3"><a></a>  <span class="fu">summarize</span>(</span>
+<span id="cb21-4"><a></a>    <span class="at">avg_price =</span> <span class="fu">mean</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb21-5"><a></a>    <span class="at">total_cars =</span> <span class="fu">n</span>()</span>
+<span id="cb21-6"><a></a>  )</span>
+<span id="cb21-7"><a></a><span class="co"># Result: 1 row with overall averages</span></span>
+<span id="cb21-8"><a></a></span>
+<span id="cb21-9"><a></a><span class="co"># With grouping - one row per group</span></span>
+<span id="cb21-10"><a></a>car_data <span class="sc">%&gt;%</span></span>
+<span id="cb21-11"><a></a>  <span class="fu">group_by</span>(Manufacturer) <span class="sc">%&gt;%</span></span>
+<span id="cb21-12"><a></a>  <span class="fu">summarize</span>(</span>
+<span id="cb21-13"><a></a>    <span class="at">avg_price =</span> <span class="fu">mean</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb21-14"><a></a>    <span class="at">total_cars =</span> <span class="fu">n</span>()</span>
+<span id="cb21-15"><a></a>  )</span>
+<span id="cb21-16"><a></a><span class="co"># Result: 5 rows (one per manufacturer)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="before-and-after-example" class="slide level2">
 <h2>Before and After Example</h2>
@@ -861,16 +851,16 @@ Ford         35000      1</code></pre>
 <section id="common-summarize-functions" class="slide level2">
 <h2>Common summarize() Functions</h2>
 <p><strong>Essential summary functions:</strong></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a></a>car_data <span class="sc">%&gt;%</span></span>
-<span id="cb25-2"><a></a>  <span class="fu">group_by</span>(Manufacturer) <span class="sc">%&gt;%</span></span>
-<span id="cb25-3"><a></a>  <span class="fu">summarize</span>(</span>
-<span id="cb25-4"><a></a>    <span class="at">count =</span> <span class="fu">n</span>(),                          <span class="co"># Number of rows</span></span>
-<span id="cb25-5"><a></a>    <span class="at">avg_price =</span> <span class="fu">mean</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="co"># Average</span></span>
-<span id="cb25-6"><a></a>    <span class="at">med_price =</span> <span class="fu">median</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="co"># Median  </span></span>
-<span id="cb25-7"><a></a>    <span class="at">min_price =</span> <span class="fu">min</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),   <span class="co"># Minimum</span></span>
-<span id="cb25-8"><a></a>    <span class="at">max_price =</span> <span class="fu">max</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),   <span class="co"># Maximum</span></span>
-<span id="cb25-9"><a></a>    <span class="at">std_dev =</span> <span class="fu">sd</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)       <span class="co"># Standard deviation</span></span>
-<span id="cb25-10"><a></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a></a>car_data <span class="sc">%&gt;%</span></span>
+<span id="cb24-2"><a></a>  <span class="fu">group_by</span>(Manufacturer) <span class="sc">%&gt;%</span></span>
+<span id="cb24-3"><a></a>  <span class="fu">summarize</span>(</span>
+<span id="cb24-4"><a></a>    <span class="at">count =</span> <span class="fu">n</span>(),                          <span class="co"># Number of rows</span></span>
+<span id="cb24-5"><a></a>    <span class="at">avg_price =</span> <span class="fu">mean</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="co"># Average</span></span>
+<span id="cb24-6"><a></a>    <span class="at">med_price =</span> <span class="fu">median</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="co"># Median  </span></span>
+<span id="cb24-7"><a></a>    <span class="at">min_price =</span> <span class="fu">min</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),   <span class="co"># Minimum</span></span>
+<span id="cb24-8"><a></a>    <span class="at">max_price =</span> <span class="fu">max</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),   <span class="co"># Maximum</span></span>
+<span id="cb24-9"><a></a>    <span class="at">std_dev =</span> <span class="fu">sd</span>(Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)       <span class="co"># Standard deviation</span></span>
+<span id="cb24-10"><a></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="policy-analysis-applications" class="slide level2">
 <h2>Policy Analysis Applications</h2>
@@ -1192,6 +1182,82 @@ Ford         35000      1</code></pre>
         ]
       });
     </script>
+    
+
+    <script>
+
+      // htmlwidgets need to know to resize themselves when slides are shown/hidden.
+
+      // Fire the "slideenter" event (handled by htmlwidgets.js) when the current
+
+      // slide changes (different for each slide format).
+
+      (function () {
+
+        // dispatch for htmlwidgets
+
+        function fireSlideEnter() {
+
+          const event = window.document.createEvent("Event");
+
+          event.initEvent("slideenter", true, true);
+
+          window.document.dispatchEvent(event);
+
+        }
+
+    
+
+        function fireSlideChanged(previousSlide, currentSlide) {
+
+          fireSlideEnter();
+
+    
+
+          // dispatch for shiny
+
+          if (window.jQuery) {
+
+            if (previousSlide) {
+
+              window.jQuery(previousSlide).trigger("hidden");
+
+            }
+
+            if (currentSlide) {
+
+              window.jQuery(currentSlide).trigger("shown");
+
+            }
+
+          }
+
+        }
+
+    
+
+        // hookup for slidy
+
+        if (window.w3c_slidy) {
+
+          window.w3c_slidy.add_observer(function (slide_num) {
+
+            // slide_num starts at position 1
+
+            fireSlideChanged(null, w3c_slidy.slides[slide_num - 1]);
+
+          });
+
+        }
+
+    
+
+      })();
+
+    </script>
+
+    
+
     <script id="quarto-html-after-body" type="application/javascript">
       window.document.addEventListener("DOMContentLoaded", function (event) {
         const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")

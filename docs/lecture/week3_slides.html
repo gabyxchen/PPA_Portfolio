@@ -29,72 +29,6 @@
       margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
       vertical-align: middle;
     }
-    /* CSS for syntax highlighting */
-    html { -webkit-text-size-adjust: 100%; }
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      { color: #003b4f; background-color: #f1f3f5; }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span { color: #003b4f; } /* Normal */
-    code span.al { color: #ad0000; } /* Alert */
-    code span.an { color: #5e5e5e; } /* Annotation */
-    code span.at { color: #657422; } /* Attribute */
-    code span.bn { color: #ad0000; } /* BaseN */
-    code span.bu { } /* BuiltIn */
-    code span.cf { color: #003b4f; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #20794d; } /* Char */
-    code span.cn { color: #8f5902; } /* Constant */
-    code span.co { color: #5e5e5e; } /* Comment */
-    code span.cv { color: #5e5e5e; font-style: italic; } /* CommentVar */
-    code span.do { color: #5e5e5e; font-style: italic; } /* Documentation */
-    code span.dt { color: #ad0000; } /* DataType */
-    code span.dv { color: #ad0000; } /* DecVal */
-    code span.er { color: #ad0000; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #ad0000; } /* Float */
-    code span.fu { color: #4758ab; } /* Function */
-    code span.im { color: #00769e; } /* Import */
-    code span.in { color: #5e5e5e; } /* Information */
-    code span.kw { color: #003b4f; font-weight: bold; } /* Keyword */
-    code span.op { color: #5e5e5e; } /* Operator */
-    code span.ot { color: #003b4f; } /* Other */
-    code span.pp { color: #ad0000; } /* Preprocessor */
-    code span.sc { color: #5e5e5e; } /* SpecialChar */
-    code span.ss { color: #20794d; } /* SpecialString */
-    code span.st { color: #20794d; } /* String */
-    code span.va { color: #111111; } /* Variable */
-    code span.vs { color: #20794d; } /* VerbatimString */
-    code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-0fde88a82f0356838740f155f1088782.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
@@ -337,48 +271,8 @@ Dr.&nbsp;Allison Lassiter
 </section>
 <section id="live-demo-basic-scatter-plot" class="slide level2">
 <h2>Live Demo: Basic Scatter Plot</h2>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb1-2"><a></a><span class="fu">library</span>(tidycensus)</span>
-<span id="cb1-3"><a></a><span class="fu">library</span>(tidyverse)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
-✔ dplyr     1.1.4     ✔ readr     2.1.6
-✔ forcats   1.0.1     ✔ stringr   1.6.0
-✔ lubridate 1.9.4     ✔ tibble    3.3.1
-✔ purrr     1.2.1     ✔ tidyr     1.3.2
-── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
-✖ dplyr::filter() masks stats::filter()
-✖ dplyr::lag()    masks stats::lag()
-ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a></a><span class="co"># Set your Census API key if you haven't already</span></span>
-<span id="cb3-2"><a></a><span class="fu">census_api_key</span>(<span class="fu">Sys.getenv</span>(<span class="st">"CENSUS_API_KEY"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>To install your API key for use in future sessions, run this function with `install = TRUE`.</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a></a><span class="co"># Get some census data for demonstration</span></span>
-<span id="cb5-2"><a></a>demo_data <span class="ot">&lt;-</span> <span class="fu">get_acs</span>(</span>
-<span id="cb5-3"><a></a>  <span class="at">geography =</span> <span class="st">"county"</span>,</span>
-<span id="cb5-4"><a></a>  <span class="at">variables =</span> <span class="fu">c</span>(</span>
-<span id="cb5-5"><a></a>    <span class="at">median_income =</span> <span class="st">"B19013_001"</span>,</span>
-<span id="cb5-6"><a></a>    <span class="at">total_pop =</span> <span class="st">"B01003_001"</span></span>
-<span id="cb5-7"><a></a>  ),</span>
-<span id="cb5-8"><a></a>  <span class="at">state =</span> <span class="st">"PA"</span>,</span>
-<span id="cb5-9"><a></a>  <span class="at">year =</span> <span class="dv">2022</span>,</span>
-<span id="cb5-10"><a></a>  <span class="at">output =</span> <span class="st">"wide"</span></span>
-<span id="cb5-11"><a></a>) <span class="sc">%&gt;%</span></span>
-<span id="cb5-12"><a></a>  <span class="fu">mutate</span>(<span class="at">county_name =</span> <span class="fu">str_remove</span>(NAME, <span class="st">", Pennsylvania"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Getting data from the 2018-2022 5-year ACS</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a></a><span class="co"># Basic scatter plot</span></span>
-<span id="cb7-2"><a></a><span class="fu">ggplot</span>(demo_data) <span class="sc">+</span></span>
-<span id="cb7-3"><a></a>  <span class="fu">aes</span>(<span class="at">x =</span> total_popE, <span class="at">y =</span> median_incomeE) <span class="sc">+</span></span>
-<span id="cb7-4"><a></a>  <span class="fu">geom_point</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
-</div>
-<img data-src="week3_slides_files/figure-html/demo-scatter-1.png" width="672" class="r-stretch"></section>
+<img data-src="week3_slides_files/figure-revealjs/demo-scatter-1.png" width="960" class="r-stretch"></section>
 <section id="aesthetic-mappings-the-key-to-ggplot2" class="slide level2">
 <h2>Aesthetic Mappings: The Key to ggplot2</h2>
 <p><strong>Aesthetics map data to visual properties:</strong></p>
@@ -395,27 +289,8 @@ Dr.&nbsp;Allison Lassiter
 </section>
 <section id="improving-plots-with-labels-and-themes" class="slide level2">
 <h2>Improving Plots with Labels and Themes</h2>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a></a><span class="fu">ggplot</span>(demo_data) <span class="sc">+</span></span>
-<span id="cb8-2"><a></a>  <span class="fu">aes</span>(<span class="at">x =</span> total_popE, <span class="at">y =</span> median_incomeE) <span class="sc">+</span></span>
-<span id="cb8-3"><a></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
-<span id="cb8-4"><a></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se =</span> <span class="cn">TRUE</span>) <span class="sc">+</span></span>
-<span id="cb8-5"><a></a>  <span class="fu">labs</span>(</span>
-<span id="cb8-6"><a></a>    <span class="at">title =</span> <span class="st">"Income vs Population in Pennsylvania Counties"</span>,</span>
-<span id="cb8-7"><a></a>    <span class="at">subtitle =</span> <span class="st">"2018-2022 ACS 5-Year Estimates"</span>,</span>
-<span id="cb8-8"><a></a>    <span class="at">x =</span> <span class="st">"Total Population"</span>,</span>
-<span id="cb8-9"><a></a>    <span class="at">y =</span> <span class="st">"Median Household Income ($)"</span>,</span>
-<span id="cb8-10"><a></a>    <span class="at">caption =</span> <span class="st">"Source: U.S. Census Bureau ACS"</span></span>
-<span id="cb8-11"><a></a>  ) <span class="sc">+</span></span>
-<span id="cb8-12"><a></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb8-13"><a></a>  <span class="fu">scale_y_continuous</span>(<span class="at">labels =</span> scales<span class="sc">::</span>dollar) <span class="sc">+</span></span>
-<span id="cb8-14"><a></a>  <span class="fu">scale_x_continuous</span>(<span class="at">labels =</span> scales<span class="sc">::</span>comma)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>`geom_smooth()` using formula = 'y ~ x'</code></pre>
-</div>
 
-</div>
-<img data-src="week3_slides_files/figure-html/better-plot-1.png" width="672" class="r-stretch"></section>
+<img data-src="week3_slides_files/figure-revealjs/better-plot-1.png" width="960" class="r-stretch"></section>
 <section class="slide level2">
 
 </section></section>
@@ -453,48 +328,18 @@ Dr.&nbsp;Allison Lassiter
 <section id="understanding-distributions" class="slide level2">
 <h2>Understanding Distributions</h2>
 <p><strong>Why distribution shape matters:</strong></p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a></a><span class="co"># Histogram of median income</span></span>
-<span id="cb10-2"><a></a><span class="fu">ggplot</span>(demo_data) <span class="sc">+</span></span>
-<span id="cb10-3"><a></a>  <span class="fu">aes</span>(<span class="at">x =</span> median_incomeE) <span class="sc">+</span></span>
-<span id="cb10-4"><a></a>  <span class="fu">geom_histogram</span>(<span class="at">bins =</span> <span class="dv">15</span>, <span class="at">fill =</span> <span class="st">"steelblue"</span>, <span class="at">alpha =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
-<span id="cb10-5"><a></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Distribution of Median Income"</span>,</span>
-<span id="cb10-6"><a></a>       <span class="at">x =</span> <span class="st">"Median Household Income"</span>, </span>
-<span id="cb10-7"><a></a>       <span class="at">y =</span> <span class="st">"Number of Counties"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
-</div>
-<img data-src="week3_slides_files/figure-html/distribution-demo-1.png" width="672" class="r-stretch"><p><strong>What to look for:</strong> Skewness, outliers, multiple peaks, gaps</p>
+<img data-src="week3_slides_files/figure-revealjs/distribution-demo-1.png" width="960" class="r-stretch"><p><strong>What to look for:</strong> Skewness, outliers, multiple peaks, gaps</p>
 </section>
 <section id="boxplots" class="slide level2">
 <h2>Boxplots!</h2>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a></a><span class="co"># Boxplot to see outliers and quartiles  </span></span>
-<span id="cb11-2"><a></a><span class="fu">ggplot</span>(demo_data) <span class="sc">+</span></span>
-<span id="cb11-3"><a></a>  <span class="fu">aes</span>(<span class="at">y =</span> median_incomeE) <span class="sc">+</span></span>
-<span id="cb11-4"><a></a>  <span class="fu">geom_boxplot</span>(<span class="at">fill =</span> <span class="st">"lightblue"</span>) <span class="sc">+</span></span>
-<span id="cb11-5"><a></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Income Distribution with Outliers"</span>,</span>
-<span id="cb11-6"><a></a>       <span class="at">y =</span> <span class="st">"Median Household Income"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
-</div>
-<img data-src="week3_slides_files/figure-html/boxplot-1.png" width="672" class="r-stretch"></section>
+<img data-src="week3_slides_files/figure-revealjs/boxplot-1.png" width="960" class="r-stretch"></section>
 <section id="critical-data-quality-through-visualization" class="slide level2">
 <h2>Critical: Data Quality Through Visualization</h2>
 <p><strong>Research insight:</strong> Most planners don’t visualize or communicate uncertainty</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a></a><span class="co"># Visualize margins of error - ESSENTIAL for ethical practice</span></span>
-<span id="cb12-2"><a></a>demo_data <span class="sc">%&gt;%</span></span>
-<span id="cb12-3"><a></a>  <span class="fu">mutate</span>(<span class="at">moe_pct =</span> median_incomeM <span class="sc">/</span> median_incomeE <span class="sc">*</span> <span class="dv">100</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb12-4"><a></a>  <span class="fu">ggplot</span>() <span class="sc">+</span></span>
-<span id="cb12-5"><a></a>  <span class="fu">aes</span>(<span class="at">x =</span> total_popE, <span class="at">y =</span> moe_pct) <span class="sc">+</span></span>
-<span id="cb12-6"><a></a>  <span class="fu">geom_point</span>() <span class="sc">+</span></span>
-<span id="cb12-7"><a></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">10</span>, <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span></span>
-<span id="cb12-8"><a></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Data Reliability by Population Size"</span>,</span>
-<span id="cb12-9"><a></a>       <span class="at">x =</span> <span class="st">"Population"</span>, </span>
-<span id="cb12-10"><a></a>       <span class="at">y =</span> <span class="st">"Margin of Error (%)"</span>,</span>
-<span id="cb12-11"><a></a>       <span class="at">caption =</span> <span class="st">"Red line = 10% threshold for reliability"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
-</div>
-<img data-src="week3_slides_files/figure-html/quality-viz-1.png" width="672" class="r-stretch"><p><strong>Pattern:</strong> Smaller populations have higher uncertainty <strong>Ethical implication:</strong> These communities might be systematically undercounted</p>
+<img data-src="week3_slides_files/figure-revealjs/quality-viz-1.png" width="960" class="r-stretch"><p><strong>Pattern:</strong> Smaller populations have higher uncertainty <strong>Ethical implication:</strong> These communities might be systematically undercounted</p>
 </section>
 <section id="research-based-recommendations-for-planners" class="slide level2">
 <h2>Research-Based Recommendations for Planners</h2>
@@ -560,35 +405,6 @@ Dr.&nbsp;Allison Lassiter
 <section id="live-demo-joining-census-tables" class="slide level2">
 <h2>Live Demo: Joining Census Tables</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a></a><span class="co"># Get income data</span></span>
-<span id="cb13-2"><a></a>income_data <span class="ot">&lt;-</span> <span class="fu">get_acs</span>(</span>
-<span id="cb13-3"><a></a>  <span class="at">geography =</span> <span class="st">"county"</span>,</span>
-<span id="cb13-4"><a></a>  <span class="at">variables =</span> <span class="st">"B19013_001"</span>,</span>
-<span id="cb13-5"><a></a>  <span class="at">state =</span> <span class="st">"PA"</span>, </span>
-<span id="cb13-6"><a></a>  <span class="at">year =</span> <span class="dv">2022</span>,</span>
-<span id="cb13-7"><a></a>  <span class="at">output =</span> <span class="st">"wide"</span></span>
-<span id="cb13-8"><a></a>) <span class="sc">%&gt;%</span></span>
-<span id="cb13-9"><a></a>  <span class="fu">select</span>(GEOID, NAME, <span class="at">median_income =</span> B19013_001E, <span class="at">income_moe =</span> B19013_001M)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Getting data from the 2018-2022 5-year ACS</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a></a><span class="co"># Get education data  </span></span>
-<span id="cb15-2"><a></a>education_data <span class="ot">&lt;-</span> <span class="fu">get_acs</span>(</span>
-<span id="cb15-3"><a></a>  <span class="at">geography =</span> <span class="st">"county"</span>,</span>
-<span id="cb15-4"><a></a>  <span class="at">variables =</span> <span class="st">"B15003_022"</span>,  <span class="co"># Bachelor's degree or higher</span></span>
-<span id="cb15-5"><a></a>  <span class="at">state =</span> <span class="st">"PA"</span>,</span>
-<span id="cb15-6"><a></a>  <span class="at">year =</span> <span class="dv">2022</span>, </span>
-<span id="cb15-7"><a></a>  <span class="at">output =</span> <span class="st">"wide"</span></span>
-<span id="cb15-8"><a></a>) <span class="sc">%&gt;%</span></span>
-<span id="cb15-9"><a></a>  <span class="fu">select</span>(GEOID, <span class="at">college_pop =</span> B15003_022E, <span class="at">college_moe =</span> B15003_022M)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Getting data from the 2018-2022 5-year ACS</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a></a><span class="co"># Join them together</span></span>
-<span id="cb17-2"><a></a>combined_data <span class="ot">&lt;-</span> income_data <span class="sc">%&gt;%</span></span>
-<span id="cb17-3"><a></a>  <span class="fu">left_join</span>(education_data, <span class="at">by =</span> <span class="st">"GEOID"</span>)</span>
-<span id="cb17-4"><a></a></span>
-<span id="cb17-5"><a></a><span class="fu">head</span>(combined_data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 6 × 6
   GEOID NAME                    median_income income_moe college_pop college_moe
@@ -606,39 +422,21 @@ Dr.&nbsp;Allison Lassiter
 <h2>Checking Join Results and Data Quality</h2>
 <p><strong>Always verify joins AND assess combined reliability:</strong></p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a></a><span class="co"># Check dimensions</span></span>
-<span id="cb19-2"><a></a><span class="fu">cat</span>(<span class="st">"Income data rows:"</span>, <span class="fu">nrow</span>(income_data), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Income data rows: 67 </code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a></a><span class="fu">cat</span>(<span class="st">"Education data rows:"</span>, <span class="fu">nrow</span>(education_data), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>) </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Education data rows: 67 </code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a></a><span class="fu">cat</span>(<span class="st">"Combined data rows:"</span>, <span class="fu">nrow</span>(combined_data), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Combined data rows: 67 </code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a></a><span class="co"># Check for missing values after join</span></span>
-<span id="cb25-2"><a></a>combined_data <span class="sc">%&gt;%</span></span>
-<span id="cb25-3"><a></a>  <span class="fu">summarize</span>(</span>
-<span id="cb25-4"><a></a>    <span class="at">missing_income =</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(median_income)),</span>
-<span id="cb25-5"><a></a>    <span class="at">missing_education =</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(college_pop))</span>
-<span id="cb25-6"><a></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 1 × 2
   missing_income missing_education
            &lt;int&gt;             &lt;int&gt;
 1              0                 0</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a></a><span class="co"># IMPORTANT: Assess reliability of joined data</span></span>
-<span id="cb27-2"><a></a>combined_data <span class="sc">%&gt;%</span></span>
-<span id="cb27-3"><a></a>  <span class="fu">mutate</span>(</span>
-<span id="cb27-4"><a></a>    <span class="at">income_cv =</span> (income_moe <span class="sc">/</span> median_income) <span class="sc">*</span> <span class="dv">100</span>,</span>
-<span id="cb27-5"><a></a>    <span class="at">college_cv =</span> (college_moe <span class="sc">/</span> college_pop) <span class="sc">*</span> <span class="dv">100</span></span>
-<span id="cb27-6"><a></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb27-7"><a></a>  <span class="fu">select</span>(NAME, income_cv, college_cv) <span class="sc">%&gt;%</span></span>
-<span id="cb27-8"><a></a>  <span class="fu">head</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 6 × 3
   NAME                           income_cv college_cv
@@ -940,6 +738,82 @@ Dr.&nbsp;Allison Lassiter
         ]
       });
     </script>
+    
+
+    <script>
+
+      // htmlwidgets need to know to resize themselves when slides are shown/hidden.
+
+      // Fire the "slideenter" event (handled by htmlwidgets.js) when the current
+
+      // slide changes (different for each slide format).
+
+      (function () {
+
+        // dispatch for htmlwidgets
+
+        function fireSlideEnter() {
+
+          const event = window.document.createEvent("Event");
+
+          event.initEvent("slideenter", true, true);
+
+          window.document.dispatchEvent(event);
+
+        }
+
+    
+
+        function fireSlideChanged(previousSlide, currentSlide) {
+
+          fireSlideEnter();
+
+    
+
+          // dispatch for shiny
+
+          if (window.jQuery) {
+
+            if (previousSlide) {
+
+              window.jQuery(previousSlide).trigger("hidden");
+
+            }
+
+            if (currentSlide) {
+
+              window.jQuery(currentSlide).trigger("shown");
+
+            }
+
+          }
+
+        }
+
+    
+
+        // hookup for slidy
+
+        if (window.w3c_slidy) {
+
+          window.w3c_slidy.add_observer(function (slide_num) {
+
+            // slide_num starts at position 1
+
+            fireSlideChanged(null, w3c_slidy.slides[slide_num - 1]);
+
+          });
+
+        }
+
+    
+
+      })();
+
+    </script>
+
+    
+
     <script id="quarto-html-after-body" type="application/javascript">
       window.document.addEventListener("DOMContentLoaded", function (event) {
         const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
