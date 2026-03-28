@@ -2329,5 +2329,54 @@
     "title": "Spatial Machine Learning & Advanced Regression",
     "section": "Tips for Success",
     "text": "Tips for Success\n\n\n✅ Do:\n\nStart simple, add complexity\nCheck for NAs: sum(is.na())\nTest on small subset first\nComment your code\nCheck coefficient signs\nUse glimpse(), summary()\n\n❌ Don’t:\n\nAdd 50 variables at once\nIgnore errors\nForget st_drop_geometry() for non-spatial operations\nSkip sparse category check\n\n\nCommon Errors\n“Factor has new levels” → Group sparse categories\n“Computationally singular” → Remove collinear variables\nVery high RMSE → Check outliers, scale\nCV takes forever → Simplify model or reduce folds\nNegative R² → Model worse than mean, rethink variables"
+  },
+  {
+    "objectID": "lab/lab4/lab4.html",
+    "href": "lab/lab4/lab4.html",
+    "title": "Lab 4: Spatial Predictive Analysis",
+    "section": "",
+    "text": "In this lab, you will apply the spatial predictive modeling techniques demonstrated in the class exercise using a different 311 service request type of your choice as the predictor variable. You will build a complete spatial predictive model, document your process, and interpret your results.\n\n\nBy completing this assignment, you will demonstrate your ability to:\n\nAdapt example code to analyze a new dataset\nBuild spatial features for predictive modeling\nApply count regression techniques to spatial data\nImplement spatial cross-validation\nInterpret and communicate model results\nCritically evaluate model performance"
+  },
+  {
+    "objectID": "lab/lab4/lab4.html#assignment-overview",
+    "href": "lab/lab4/lab4.html#assignment-overview",
+    "title": "Lab 4: Spatial Predictive Analysis",
+    "section": "",
+    "text": "In this lab, you will apply the spatial predictive modeling techniques demonstrated in the class exercise using a different 311 service request type of your choice as the predictor variable. You will build a complete spatial predictive model, document your process, and interpret your results.\n\n\nBy completing this assignment, you will demonstrate your ability to:\n\nAdapt example code to analyze a new dataset\nBuild spatial features for predictive modeling\nApply count regression techniques to spatial data\nImplement spatial cross-validation\nInterpret and communicate model results\nCritically evaluate model performance"
+  },
+  {
+    "objectID": "lab/lab4/lab4.html#step-1-choose-your-311-violation-type",
+    "href": "lab/lab4/lab4.html#step-1-choose-your-311-violation-type",
+    "title": "Lab 4: Spatial Predictive Analysis",
+    "section": "Step 1: Choose Your 311 Violation Type",
+    "text": "Step 1: Choose Your 311 Violation Type\n\nGetting the Data\nVisit the Chicago 311 Service Requests dataset:\nhttps://data.cityofchicago.org/stories/s/311-Dataset-Changes-12-11-2018/d7nq-5g7t\nBrowse the available service request types (e.g., Graffiti Removal, Pothole Repair, Street Light Out, Sanitation Code Violations, etc.) and choose one violation type that interests you.\n\n\nRequirements for Your Choice\n\nChoose a different violation type than the abandoned cars we did in class."
+  },
+  {
+    "objectID": "lab/lab4/lab4.html#step-2-complete-the-analysis",
+    "href": "lab/lab4/lab4.html#step-2-complete-the-analysis",
+    "title": "Lab 4: Spatial Predictive Analysis",
+    "section": "Step 2: Complete the Analysis",
+    "text": "Step 2: Complete the Analysis\nUsing the class exercise as your template, adapt the code to analyze your chosen 311 violation type.\n\nWhat to Include\nWork through all major sections of the analysis:\n\nPart 1: Data Loading & Exploration\n\nLoad your 311 data and Chicago spatial boundaries\nCreate visualizations showing the spatial distribution of your violation type\nDescribe patterns you observe\n\n\n\nPart 2: Fishnet Grid Creation\n\nCreate a 500m x 500m fishnet grid\nAggregate your violations to grid cells\nVisualize the count distribution\n\n\n\nPart 3: Spatial Features\n\nCalculate k-nearest neighbor features\nPerform Local Moran’s I analysis\nIdentify hot spots and cold spots\nCreate distance-to-hotspot measures\nJoin any additional contextual data if you are looking for more to do and really get into this (e.g., demographics, land use)\n\n\n\nPart 4: Count Regression Models\n\nFit Poisson regression\nFit Negative Binomial regression\nCompare model fit (AIC)\n\n\n\nPart 5: Spatial Cross-Validation (2017)\n\nImplement Leave-One-Group-Out cross-validation on 2017 data\nCalculate and report error metrics (MAE, RMSE)\n\n\n\nPart 6: Model Evaluation\n\nCompare to KDE baseline\n\n\n\nCHALLENGE TASK: Temporal Validation (2018) not mandatory, only if you want very strong spatial analytics muscles\n\nDownload 2018 crimes https://data.cityofchicago.org/Public-Safety/Crimes-2018/3i3m-jwuy/about_data\nBe sure to filter for BURGLARIES (FORCED ENTRY only to match the 2017 data)\nAggregate 2018 violations to the same fishnet grid\nUse your 2017 model to predict 2018 counts\nCalculate temporal validation metrics\nCompare spatial vs. temporal validation performance"
+  },
+  {
+    "objectID": "lab/lab4/lab4.html#step-3-write-your-analysis",
+    "href": "lab/lab4/lab4.html#step-3-write-your-analysis",
+    "title": "Lab 4: Spatial Predictive Analysis",
+    "section": "Step 3: Write Your Analysis",
+    "text": "Step 3: Write Your Analysis\n\nCritical Requirement: Explain Each Step\nFor each major section, you must explain in your own words:\n\nWhat you are doing in that step\nWhy this step is important for the analysis\nWhat you found or learned from the results\n\nDo not simply copy text from the example or from your AI friend. Think about the purpose of each technique and articulate it in your own words."
+  },
+  {
+    "objectID": "lab/lab4/lab4.html#step-4-format-your-document",
+    "href": "lab/lab4/lab4.html#step-4-format-your-document",
+    "title": "Lab 4: Spatial Predictive Analysis",
+    "section": "Step 4: Format Your Document",
+    "text": "Step 4: Format Your Document\n\nFormatting Requirements\nYour rendered HTML document should be professional and easy to read:\n\n✓ Clean Code\n\nRemove unnecessary code, comments, or debugging lines\nKeep only essential code chunks\nUse code-fold: show in your YAML header\n\n\n\n✓ Clear Structure\n\nUse headers to organize sections\nInclude a table of contents\nAdd your name and date\n\n\n\n✓ Readable Text\n\nEnsure all text renders properly (no broken markdown)\nCheck that headers appear as headers (not plain text)\nUse proper markdown formatting\n\n\n\n✓ Quality Visualizations\n\nAll plots should have titles and labels\nMaps should be readable\nUse consistent color schemes\n\n\n\n✓ Professional Presentation\n\nProofread for typos\nRemove any “Your answer here” placeholders\nMake sure all code runs without errors\nMake IT NEAT. WE GOTTA LOOK GOOD HERE."
+  },
+  {
+    "objectID": "lab/lab4/lab4.html#submission-checklist",
+    "href": "lab/lab4/lab4.html#submission-checklist",
+    "title": "Lab 4: Spatial Predictive Analysis",
+    "section": "Submission Checklist",
+    "text": "Submission Checklist\nBefore you submit, verify that your document includes:\n\nRequired Components\n\nIntroduction: Brief description of your chosen 311 violation type and why you selected it\nData Exploration: Maps and summary statistics of your violation data\nFishnet Grid: Successfully created and visualized grid with aggregated counts\nSpatial Features: At least 2-3 spatial features calculated (k-NN, distance measures, etc.)\nLocal Moran’s I: Spatial autocorrelation analysis with interpretation\nCount Regression: Both Poisson and Negative Binomial models with comparison\nSpatial Cross-Validation: LOGO CV implemented on 2017 data with reported metrics\nTemporal Validation: 2018 data aggregated and tested with 2017 model(OPTIONAL.)\nValidation Comparison: Comparison of spatial vs. temporal validation performance\nModel Comparison: Your model vs. KDE baseline for 2018 predictions\nError Analysis: Maps and discussion of where model performs well/poorly\nWritten Explanations: Your own words explaining each step\n\n\n\nTechnical Requirements\n\nDocument renders to HTML without errors\nCode is clean and well-organized\nAll visualizations display properly\nHeaders and formatting render correctly\nFile is named successfully posted to your website"
   }
 ]

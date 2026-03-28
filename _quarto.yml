@@ -19,6 +19,8 @@ website:
             text: "Lab 2: Spatial Analysis and Visualization"
           - href: "lab3/technical_appendix_angieVer.html"
             text: "Midterm Challenge: Philadelphia Housing Price Prediction"
+          - href: lab/lab4/lab4.qmd
+            text: "Lab 4: Spatial Predictive Analysis"
 
 
 format:

@@ -1,8 +1,8 @@
 ---
 title: "Lab 4: Spatial Predictive Analysis"
 subtitle: "Analyzing 311 Violations"
-author: "Your Name Here"
-date: today
+author: "Gab Chen"
+date: 3/28/2026
 format: 
   html:
     code-fold: false
@@ -61,10 +61,61 @@ Work through all major sections of the analysis:
 - Create visualizations showing the spatial distribution of your violation type
 - Describe patterns you observe
 
+```{r setup}
+#| message: false
+#| warning: false
+
+# Load required packages
+library(tidyverse)      # Data manipulation
+library(sf)             # Spatial operations
+library(here)           # Relative file paths
+library(viridis)        # Color scales
+library(terra)          # Raster operations (replaces 'raster')
+library(spdep)          # Spatial dependence
+library(FNN)            # Fast nearest neighbors
+library(MASS)           # Negative binomial regression
+library(patchwork)      # Plot composition (replaces grid/gridExtra)
+library(knitr)          # Tables
+library(kableExtra)     # Table formatting
+library(classInt)       # Classification intervals
+library(ggplot2)
+
+
+# Spatstat for analyzing point patterns - split into sub-packages
+library(spatstat.geom)    # Spatial geometries
+library(spatstat.explore) # Spatial exploration/KDE
+
+# Set options
+options(scipen = 999)  # No scientific notation
+set.seed(5080)         # Reproducibility, could be any number
+
+cat("✓ All packages loaded successfully!\n")
+cat("✓ Working directory:", getwd(), "\n")
+
+```
+
+
+```{r load-boundaries}
+#| message: false
+
+# Load garbage carts
+garbage <- st_read("311_Service_Requests_-_Garbage_Carts_-_Historical_20260328.csv")
+
+# Load Chicago boundary
+chicagoBoundary <- 
+  st_read("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/DATA/Chapter5/chicagoBoundary.geojson") %>%
+  st_transform('ESRI:102271')
+
+# Plot garbage carts in Chicago
+
+```
+
 #### Part 2: Fishnet Grid Creation
 - Create a 500m x 500m fishnet grid
 - Aggregate your violations to grid cells
 - Visualize the count distribution
+
+
 
 #### Part 3: Spatial Features
 - Calculate k-nearest neighbor features
