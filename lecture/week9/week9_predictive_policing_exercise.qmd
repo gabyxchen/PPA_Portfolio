@@ -223,10 +223,10 @@ A **fishnet grid** converts irregular point data into a regular grid of cells wh
 Think of it as overlaying graph paper on a map.
 
 ```{r create-fishnet}
-# Create 500m x 500m grid
+# Create 500ft x 500ft grid
 fishnet <- st_make_grid(
   chicagoBoundary,
-  cellsize = 500,  # 500 meters per cell
+  cellsize = 500,  # 500 feet per cell
   square = TRUE
 ) %>%
   st_sf() %>%
@@ -239,8 +239,8 @@ fishnet <- fishnet[chicagoBoundary, ]
 # View basic info
 cat("✓ Created fishnet grid\n")
 cat("  - Number of cells:", nrow(fishnet), "\n")
-cat("  - Cell size:", 500, "x", 500, "meters\n")
-cat("  - Cell area:", round(st_area(fishnet[1,])), "square meters\n")
+cat("  - Cell size:", 500, "x", 500, "feet\n")
+cat("  - Cell area:", round(st_area(fishnet[1,])), "square feet\n")
 ```
 
 **Question 2.1:** Why do we use a regular grid instead of existing boundaries like neighborhoods or census tracts? What are the advantages and disadvantages of this approach?
