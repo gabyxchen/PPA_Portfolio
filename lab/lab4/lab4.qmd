@@ -379,6 +379,10 @@ fishnet_model <- fishnet %>%
   ) %>%
   na.omit()  # Remove any remaining NAs
 
+# Verify clean
+fishnet_model %>%
+  summarise(across(everything(),
+                   ~sum(is.na(.) | is.nan(.) | is.infinite(.))))
 
 cat("✓ Prepared modeling data\n")
 cat("  - Observations:", nrow(fishnet_model), "\n")
@@ -416,7 +420,8 @@ if (dispersion > 1.5) {
 # Fit Negative Binomial model
 model_nb <- glm.nb(
   countcarts ~ carts.nn + dist_to_hotspot + med_hh_income,
-  data = fishnet_model
+  data = fishnet_model，
+  control = glm.control(maxit = 100)
 )
 
 # Summary
