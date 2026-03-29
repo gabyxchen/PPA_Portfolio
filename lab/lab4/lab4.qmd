@@ -116,7 +116,7 @@ chicagoBoundary <-
 # Plot garbage carts in Chicago
 ggplot() +
   geom_sf(data = chicagoBoundary, fill = "grey90", color = "black", linewidth = 0.5) +
-  geom_sf(data = cart, color = "steelblue", size = 0.3, alpha = 0.4) +
+  geom_sf(data = cart, color = "red", size = 0.5, alpha = 0.4) +
   labs(
     title = "311 Garbage Cart Service Requests",
     subtitle = "Chicago, IL",
@@ -141,10 +141,10 @@ cat("  - Garbage cart:", nrow(cart), "\n")
 - Visualize the count distribution
 
 ```{r create-fishnet}
-# Create 500m x 500m grid
+# Create 500ft x 500ft grid
 fishnet <- st_make_grid(
   chicagoBoundary,
-  cellsize = 500,  # 500 meters per cell
+  cellsize = 500,  # 500 feet per cell
   square = TRUE
 ) %>%
   st_sf() %>%
@@ -157,8 +157,8 @@ fishnet <- fishnet[chicagoBoundary, ]
 # View basic info
 cat("✓ Created fishnet grid\n")
 cat("  - Number of cells:", nrow(fishnet), "\n")
-cat("  - Cell size:", 500, "x", 500, "meters\n")
-cat("  - Cell area:", round(st_area(fishnet[1,])), "square meters\n")
+cat("  - Cell size:", 500, "x", 500, "feet\n")
+cat("  - Cell area:", round(st_area(fishnet[1,])), "square feet\n")
 
 ```
 
@@ -187,6 +187,27 @@ cat("\nCells with zero barbage carts:",
     "(", round(100 * sum(fishnet$countcarts == 0) / nrow(fishnet), 1), "%)\n")
 ```
 
+```{r visualize-fishnet}
+#| fig-width: 5
+#| fig-height: 8
+
+# Visualize aggregated counts
+ggplot() +
+  geom_sf(data = fishnet, aes(fill = countcarts), color = NA) +
+  geom_sf(data = chicagoBoundary, fill = NA, color = "white", linewidth = 1) +
+  scale_fill_viridis_c(
+    name = "garbage \ncart",
+    option = "plasma",
+    trans = "sqrt",  # Square root for better visualization of skewed data
+    breaks = c(0, 50, 200, 500, 800)
+  ) +
+  labs(
+    title = "Garbage Cart Counts by Grid Cell",
+    subtitle = "500ft x 500ft cells, Chicago 2026"
+  ) +
+  theme_void()
+```
+
 #### Part 3: Spatial Features
 - Calculate k-nearest neighbor features
 - Perform Local Moran's I analysis
@@ -194,14 +215,286 @@ cat("\nCells with zero barbage carts:",
 - Create distance-to-hotspot measures
 - Join any additional contextual data if you are looking for more to do and really get into this (e.g., demographics, land use)
 
+
+```{r nn-feature}
+#| message: false
+
+# Calculate mean distance to 3 nearest garbage carts
+# (Do this OUTSIDE of mutate to avoid sf conflicts)
+
+# Get coordinates
+fishnet_coords <- st_coordinates(st_centroid(fishnet))
+cart_coords <- st_coordinates(cart)
+
+# Calculate k nearest neighbors and distances
+nn_result <- get.knnx(cart_coords, fishnet_coords, k = 3)
+
+# Add to fishnet
+fishnet <- fishnet %>%
+  mutate(
+    carts.nn = rowMeans(nn_result$nn.dist)
+  )
+
+cat("✓ Calculated nearest neighbor distances\n")
+summary(fishnet$carts.nn)
+```
+
+```{r local-morans}
+# Function to calculate Local Moran's I
+calculate_local_morans <- function(data, variable, k = 5) {
+  
+  # Create spatial weights
+  coords <- st_coordinates(st_centroid(data))
+  neighbors <- knn2nb(knearneigh(coords, k = k))
+  weights <- nb2listw(neighbors, style = "W", zero.policy = TRUE)
+  
+  # Calculate Local Moran's I
+  local_moran <- localmoran(data[[variable]], weights)
+  
+  # Classify clusters
+  mean_val <- mean(data[[variable]], na.rm = TRUE)
+  
+  data %>%
+    mutate(
+      local_i = local_moran[, 1],
+      p_value = local_moran[, 5],
+      is_significant = p_value < 0.05,
+      
+      moran_class = case_when(
+        !is_significant ~ "Not Significant",
+        local_i > 0 & .data[[variable]] > mean_val ~ "High-High",
+        local_i > 0 & .data[[variable]] <= mean_val ~ "Low-Low",
+        local_i < 0 & .data[[variable]] > mean_val ~ "High-Low",
+        local_i < 0 & .data[[variable]] <= mean_val ~ "Low-High",
+        TRUE ~ "Not Significant"
+      )
+    )
+}
+
+# Apply to garbage carts
+fishnet <- calculate_local_morans(fishnet, "countcarts", k = 5)
+```
+
+```{r visualize-morans}
+#| fig-width: 5
+#| fig-height: 8
+
+# Visualize hot spots
+ggplot() +
+  geom_sf(
+    data = fishnet, 
+    aes(fill = moran_class), 
+    color = NA
+  ) +
+  scale_fill_manual(
+    values = c(
+      "High-High" = "#d7191c",
+      "High-Low" = "#fdae61",
+      "Low-High" = "#abd9e9",
+      "Low-Low" = "#2c7bb6",
+      "Not Significant" = "gray90"
+    ),
+    name = "Cluster Type"
+  ) +
+  labs(
+    title = "Local Moran's I: Garbage Cart Clusters",
+    subtitle = "High-High = Hot spots of disorder\nLow-Low = Cold spots of disorder"
+  ) +
+  theme_void()
+```
+
+```{r distance-to-hotspots}
+# Get centroids of "High-High" cells (hot spots)
+hotspots <- fishnet %>%
+  filter(moran_class == "High-High") %>%
+  st_centroid()
+
+# Calculate distance from each cell to nearest hot spot
+if (nrow(hotspots) > 0) {
+  fishnet <- fishnet %>%
+    mutate(
+      dist_to_hotspot = as.numeric(
+        st_distance(st_centroid(fishnet), hotspots %>% st_union())
+      )
+    )
+  
+  cat("✓ Calculated distance to garbage carts hot spots\n")
+  cat("  - Number of hot spot cells:", nrow(hotspots), "\n")
+} else {
+  fishnet <- fishnet %>%
+    mutate(dist_to_hotspot = 0)
+  cat("⚠ No significant hot spots found\n")
+}
+```
+
+```{r join-median HH income}
+
+library(tidycensus)
+
+# Pull median household income by tract for Cook County (Chicago)
+chicago_income <- get_acs(
+  geography = "tract",
+  variables = "B19013_001",
+  state = "IL",
+  county = "Cook",
+  year = 2022,
+  geometry = TRUE        # pulls tract boundaries as sf object
+) %>%
+  st_transform('ESRI:102271') %>%   # match your project CRS
+  rename(med_hh_income = estimate)
+
+# Quick check
+summary(chicago_income$med_hh_income)
+
+# Join HH income information to fishnet
+fishnet <- st_join(
+  fishnet,
+  chicago_income,
+  join = st_intersects,
+  left = TRUE
+) %>%
+  filter(!is.na(uniqueID))  # Remove cells outside census tracts
+
+cat("✓ Joined Median Household Income\n")
+cat("  - Census Tracts:", length(unique(fishnet$uniqueID)), "\n")
+cat("  - Cells:", nrow(fishnet), "\n")
+```
+
+
 #### Part 4: Count Regression Models
 - Fit Poisson regression
 - Fit Negative Binomial regression
 - Compare model fit (AIC)
 
+```{r prepare-data}
+# Create clean modeling dataset
+fishnet_model <- fishnet %>%
+  st_drop_geometry() %>%
+  dplyr::select(
+    uniqueID,
+    countcarts,
+    carts.nn,
+    dist_to_hotspot,
+    med_hh_income
+  ) %>%
+  na.omit()  # Remove any remaining NAs
+
+cat("✓ Prepared modeling data\n")
+cat("  - Observations:", nrow(fishnet_model), "\n")
+cat("  - Variables:", ncol(fishnet_model), "\n")
+```
+
+```{r fit-poisson}
+# Fit Poisson regression
+model_poisson <- glm(
+  countcarts ~ carts.nn + dist_to_hotspot + med_hh_income,
+  data = fishnet_model,
+  family = "poisson"
+)
+
+# Summary
+summary(model_poisson)
+```
+
+```{r check-overdispersion}
+# Calculate dispersion parameter
+dispersion <- sum(residuals(model_poisson, type = "pearson")^2) / 
+              model_poisson$df.residual
+
+cat("Dispersion parameter:", round(dispersion, 2), "\n")
+cat("Rule of thumb: >1.5 suggests overdispersion\n")
+
+if (dispersion > 1.5) {
+  cat("⚠ Overdispersion detected! Consider Negative Binomial model.\n")
+} else {
+  cat("✓ Dispersion looks okay for Poisson model.\n")
+}
+```
+
+```{r fit-negbin}
+# Fit Negative Binomial model
+model_nb <- glm.nb(
+  countcarts ~ carts.nn + dist_to_hotspot + med_hh_income,
+  data = fishnet_model
+)
+
+# Summary
+summary(model_nb)
+
+# Compare AIC (lower is better)
+cat("\nModel Comparison:\n")
+cat("Poisson AIC:", round(AIC(model_poisson), 1), "\n")
+cat("Negative Binomial AIC:", round(AIC(model_nb), 1), "\n")
+```
+
 #### Part 5: Spatial Cross-Validation (2017)
-- Implement Leave-One-Group-Out cross-validation on 2017 data
+- Implement Leave-One-Group-Out cross-validation on 2026 data
 - Calculate and report error metrics (MAE, RMSE)
+
+```{r spatial-cv}
+# Get unique districts
+districts <- unique(fishnet_model$District)
+cv_results <- tibble()
+
+cat("Running LOGO Cross-Validation...\n")
+
+for (i in seq_along(districts)) {
+  
+  test_district <- districts[i]
+  
+  # Split data
+  train_data <- fishnet_model %>% filter(District != test_district)
+  test_data <- fishnet_model %>% filter(District == test_district)
+  
+  # Fit model on training data
+  model_cv <- glm.nb(
+    countBurglaries ~ abandoned_cars + abandoned_cars.nn + 
+      dist_to_hotspot,
+    data = train_data
+  )
+  
+  # Predict on test data
+  test_data <- test_data %>%
+    mutate(
+      prediction = predict(model_cv, test_data, type = "response")
+    )
+  
+  # Calculate metrics
+  mae <- mean(abs(test_data$countBurglaries - test_data$prediction))
+  rmse <- sqrt(mean((test_data$countBurglaries - test_data$prediction)^2))
+  
+  # Store results
+  cv_results <- bind_rows(
+    cv_results,
+    tibble(
+      fold = i,
+      test_district = test_district,
+      n_test = nrow(test_data),
+      mae = mae,
+      rmse = rmse
+    )
+  )
+  
+  cat("  Fold", i, "/", length(districts), "- District", test_district, 
+      "- MAE:", round(mae, 2), "\n")
+}
+
+# Overall results
+cat("\n✓ Cross-Validation Complete\n")
+cat("Mean MAE:", round(mean(cv_results$mae), 2), "\n")
+cat("Mean RMSE:", round(mean(cv_results$rmse), 2), "\n")
+```
+
+```{r cv-results-table}
+# Show results
+cv_results %>%
+  arrange(desc(mae)) %>%
+  kable(
+    digits = 2,
+    caption = "LOGO CV Results by District"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
 
 #### Part 6: Model Evaluation
 - Compare to KDE baseline
