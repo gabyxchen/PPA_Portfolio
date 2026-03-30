@@ -377,7 +377,12 @@ fishnet_model <- fishnet %>%
     dist_to_hotspot,
     med_hh_income
   ) %>%
-  na.omit()  # Remove any remaining NAs
+  na.omit() %>% # Remove any remaining NAs
+  mutate(across(
+    c(carts.nn, dist_to_hotspot, med_hh_income),
+    ~ as.numeric(scale(.)),
+    .names = "{.col}_z"
+  )) # z-score
 
 # Verify clean
 fishnet_model %>%
@@ -420,7 +425,7 @@ if (dispersion > 1.5) {
 # Fit Negative Binomial model
 model_nb <- glm.nb(
   countcarts ~ carts.nn + dist_to_hotspot + med_hh_income,
-  data = fishnet_model，
+  data = fishnet_model,
   control = glm.control(maxit = 100)
 )
 
