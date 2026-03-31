@@ -18,11 +18,9 @@ execute:
   message: false
 ---
 
-
 ## About This Exercise
 
 In this exercise, you will build a model to predict recidivism
-
 
 ## Learning Objectives
 
@@ -30,11 +28,10 @@ By the end of this exercise, you will be able to:
 
 1.  Build a logistic model
 2.  Evaluate model performance
-    - Assess sensitivity, precision, and specificity
-    - Select an appropriate threshold
-4.  Discuss the consequences of threshold selection
-5.  Discuss whether the model is ready to be deployed
-
+    -   Assess sensitivity, precision, and specificity
+    -   Select an appropriate threshold
+3.  Discuss the consequences of threshold selection
+4.  Discuss whether the model is ready to be deployed
 
 ## SET UP
 
@@ -56,7 +53,6 @@ theme_set(theme_minimal())
 
 
 ```
-
 
 ## LOAD AND EXPLORE DATA
 
@@ -90,9 +86,9 @@ recidivism_data %>%
 
 ```
 
-# Critical pause: 
-- Why do base rates differ across groups? Consider both individual factors and systemic factors (differential policing, economic opportunities, program access, etc.)
+# Critical pause:
 
+-   Why do base rates differ across groups? Consider both individual factors and systemic factors (differential policing, economic opportunities, program access, etc.)
 
 ## CLEAN DATA
 
@@ -159,7 +155,6 @@ cat("  Recidivism rate =", round(mean(test_data$recidivism), 3), "\n\n")
 
 ```
 
-
 ## TRAIN MODEL
 
 ```{r logit-model}
@@ -190,10 +185,8 @@ exp(coef(logit_model))
 ```
 
 # Interpretation note:
-Coefficients show log-odds relationship
- - Odds ratios > 1 indicate increased risk
- - Odds ratios < 1 indicate decreased risk
- 
+
+Coefficients show log-odds relationship - Odds ratios \> 1 indicate increased risk - Odds ratios \< 1 indicate decreased risk
 
 ##PREDICT
 
@@ -255,8 +248,6 @@ cat("Precision (PPV):", round(cm_50$byClass["Precision"], 3),
 cat("Accuracy:", round(cm_50$overall["Accuracy"], 3), "\n\n")
 
 ```
-
-
 
 #ROC Curve and AUC
 
@@ -350,17 +341,17 @@ threshold_results %>%
 
 ```
 
-
 # CRITICAL INSIGHT: As threshold increases:
-- Fewer people flagged as high-risk (more conservative)
-- Sensitivity decreases (miss more actual recidivists)
-- Specificity increases (fewer false accusations)
-- Precision usually increases (predictions more accurate when made)
 
+-   Fewer people flagged as high-risk (more conservative)
+-   Sensitivity decreases (miss more actual recidivists)
+-   Specificity increases (fewer false accusations)
+-   Precision usually increases (predictions more accurate when made)
 
 ##EQUITY ANALYSIS
 
 # Calculate performance metrics by race
+
 ```{r performance-by-race}
 #| message: false
 
@@ -423,7 +414,9 @@ race_metrics %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
+
 # Test threshold adjustments for equity
+
 ```{r threshold-adjustments}
 #| message: false
 
@@ -479,107 +472,90 @@ ggplot(threshold_by_race, aes(x = threshold, y = FNR, color = Race)) +
 
 ```
 
-##SYNTHESIS AND RECOMMENDATIONS
-Fill in the following questions
+##SYNTHESIS AND RECOMMENDATIONS Fill in the following questions
 
 #1. How does your model fit?
 
+**AUC (Area Under ROC Curve):** \_\_\_\_\_\_\_\_\_\_
 
-**AUC (Area Under ROC Curve):** __________
+**Technical quality rating** Select one: - ☐ Excellent (AUC \> 0.90) - ☐ Good (AUC 0.80-0.90) - ☐ Acceptable (AUC 0.70-0.80) - ☐ Poor (AUC \< 0.70)
 
-
-**Technical quality rating**
-Select one:
-- ☐ Excellent (AUC > 0.90)
-- ☐ Good (AUC 0.80-0.90)
-- ☐ Acceptable (AUC 0.70-0.80)
-- ☐ Poor (AUC < 0.70)
-
-
-**At threshold = 0.50:**
-- Sensitivity (True Positive Rate): __________
-- Specificity (True Negative Rate): __________
-- Precision (Positive Predictive Value): __________
-- Overall Accuracy: __________
-
-
-
+**At threshold = 0.50:** - Sensitivity (True Positive Rate): \_\_\_\_\_\_\_\_\_\_ - Specificity (True Negative Rate): \_\_\_\_\_\_\_\_\_\_ - Precision (Positive Predictive Value): \_\_\_\_\_\_\_\_\_\_ - Overall Accuracy: \_\_\_\_\_\_\_\_\_\_
 
 #2. Equity analysis
 
-Group _____________ has ______% higher false positive rate than Group _____________
+Group \_\_\_\_\_\_\_\_\_\_\_\_\_ has \_\_\_\_\_\_% higher false positive rate than Group \_\_\_\_\_\_\_\_\_\_\_\_\_
 
 **OR**
 
-Group _____________ has ______% higher false negative rate than Group _____________
-
+Group \_\_\_\_\_\_\_\_\_\_\_\_\_ has \_\_\_\_\_\_% higher false negative rate than Group \_\_\_\_\_\_\_\_\_\_\_\_\_
 
 What are the implications of these disparities? Who is harmed?
 
-________________________________________________________________________
+------------------------------------------------------------------------
 
-________________________________________________________________________
+------------------------------------------------------------------------
 
-________________________________________________________________________
+------------------------------------------------------------------------
 
 # If we deploy this model, we recommend:
 
 Select one:
 
-- ☐ Threshold = 0.30 (Aggressive - prioritize catching recidivists)
-- ☐ Threshold = 0.50 (Balanced - default)
-- ☐ Threshold = 0.70 (Conservative - minimize false accusations)
-- ☐ Other: ________
+-   [ ] Threshold = 0.30 (Aggressive - prioritize catching recidivists)
+-   [ ] Threshold = 0.50 (Balanced - default)
+-   [ ] Threshold = 0.70 (Conservative - minimize false accusations)
+-   [ ] Other: \_\_\_\_\_\_\_\_
 
 # Rationale for threshold choice (3-4 sentences)
+
 Why this threshold? What does it optimize for? What are the trade-offs?
 
-________________________________________________________________________
+------------------------------------------------------------------------
 
-________________________________________________________________________
+------------------------------------------------------------------------
 
-________________________________________________________________________
+------------------------------------------------------------------------
 
-________________________________________________________________________
+------------------------------------------------------------------------
 
 # This threshold prioritizes:
+
 Select one:
 
-- ☐ **High Sensitivity** - Catch more people who will reoffend (accept more false positives)
-- ☐ **High Specificity** - Avoid false accusations (accept more false negatives)
-- ☐ **Balance** - Try to minimize both types of errors
+-   [ ] **High Sensitivity** - Catch more people who will reoffend (accept more false positives)
+-   [ ] **High Specificity** - Avoid false accusations (accept more false negatives)
+-   [ ] **Balance** - Try to minimize both types of errors
 
-
-#3. Should this model be used to make parole decisions? 
+#3. Should this model be used to make parole decisions?
 
 # Our recommendation to Georgia DOC:
 
 Select one:
 
-- ☐ **DEPLOY** - Use this model to inform parole decisions
-- ☐ **DO NOT DEPLOY** - Do not use this model
-- ☐ **CONDITIONAL DEPLOY** - Deploy only with specific safeguards in place
-
+-   [ ] **DEPLOY** - Use this model to inform parole decisions
+-   [ ] **DO NOT DEPLOY** - Do not use this model
+-   [ ] **CONDITIONAL DEPLOY** - Deploy only with specific safeguards in place
 
 # Discuss the following (6-8 bullet points):
-  - Technical readiness?
-  - Ethical considerations?
-  - Required safeguards?
-  - Alternatives?
-  
-  
-________________________________________________________________________
 
-________________________________________________________________________
+-   Technical readiness?
+-   Ethical considerations?
+-   Required safeguards?
+-   Alternatives?
 
-________________________________________________________________________
+------------------------------------------------------------------------
 
-________________________________________________________________________
+------------------------------------------------------------------------
 
-________________________________________________________________________
+------------------------------------------------------------------------
 
-________________________________________________________________________
+------------------------------------------------------------------------
 
-________________________________________________________________________
+------------------------------------------------------------------------
 
-________________________________________________________________________
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
