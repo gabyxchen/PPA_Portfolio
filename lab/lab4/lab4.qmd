@@ -95,11 +95,11 @@ cat("✓ Working directory:", getwd(), "\n")
 ```
 
 
-```{r load-boundaries + visualization}
+```{r load data + visualization}
 #| message: false
 #| warning: false
 
-# Load garbage carts request (Illinois State Plane East, NAD83, US Feet)
+# Load garbage cart requests (Illinois State Plane East, NAD83, US Feet)
 cart <- st_read("311_Service_Requests_-_Garbage_Carts_-_Historical_20260328.csv") %>%
     filter(!is.na(Longitude) & !is.na(Latitude), # Remove missing coords
           Longitude != "", Latitude != "",
@@ -108,12 +108,32 @@ cart <- st_read("311_Service_Requests_-_Garbage_Carts_-_Historical_20260328.csv"
   st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) %>%
   st_transform('ESRI:102271')  # Match Chicago boundary CRS
 
+# Load from provided data file (downloaded from Chicago open data portal)
+burglaries <- st_read("burglaries.shp") %>% 
+  st_transform('ESRI:102271')  # Match Chicago boundary CRS
+
+
+glimpse(burglaries)
+
+# Check the data
+cat("\n✓ Loaded burglary data\n")
+cat("  - Number of burglaries:", nrow(burglaries), "\n")
+cat("  - CRS:", st_crs(burglaries)$input, "\n")
+cat("  - Date range:", format(min(burglaries$Date, na.rm = TRUE)), "to", 
+    format(max(burglaries$Date, na.rm = TRUE)), "\n")
+
 # Load Chicago boundary
 chicagoBoundary <- 
   st_read("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/DATA/Chapter5/chicagoBoundary.geojson") %>%
   st_transform('ESRI:102271')
 
-# Plot garbage carts in Chicago
+# Load police districts (used for spatial cross-validation)
+policeDistricts <- 
+  st_read("https://data.cityofchicago.org/api/geospatial/24zt-jpfn?method=export&format=GeoJSON") %>%
+  st_transform('ESRI:102271') %>%
+  dplyr::select(District = dist_num)
+
+# Plot garbage cart service requests in Chicago
 ggplot() +
   geom_sf(data = chicagoBoundary, fill = "grey90", color = "black", linewidth = 0.5) +
   geom_sf(data = cart, color = "red", size = 0.5, alpha = 0.4) +
@@ -130,10 +150,13 @@ ggplot() +
   )
 
 cat("✓ Loaded spatial boundaries\n")
-cat("✓ Loaded Garbage cart\n")
-cat("  - Garbage cart:", nrow(cart), "\n")
+cat("✓ Loaded Garbage cart service request\n")
+cat("✓ Loaded Police districts\n")
+cat("  - Garbage cart service request:", nrow(cart), "\n")
 
 ```
+
+
 
 #### Part 2: Fishnet Grid Creation
 - Create a 500m x 500m fishnet grid
@@ -186,6 +209,32 @@ cat("\nCells with zero barbage cart requests:",
     "/", nrow(fishnet),
     "(", round(100 * sum(fishnet$countcarts == 0) / nrow(fishnet), 1), "%)\n")
 ```
+
+```{r aggregate-burglaries}
+# Spatial join: which cell contains each burglary?
+burglaries_fishnet <- st_join(burglaries, fishnet, join = st_within) %>%
+  st_drop_geometry() %>%
+  group_by(uniqueID) %>%
+  summarize(countBurglaries = n()) 
+
+
+glimpse(burglaries_fishnet)
+st_crs(burglaries_fishnet)
+
+# Join back to fishnet (cells with 0 burglaries will be NA)
+fishnet <- fishnet %>%
+  left_join(burglaries_fishnet, by = "uniqueID") %>%
+  mutate(countBurglaries = replace_na(countBurglaries, 0))
+
+# Summary statistics
+cat("\nBurglary count distribution:\n")
+summary(fishnet$countBurglaries)
+cat("\nCells with zero burglaries:", 
+    sum(fishnet$countBurglaries == 0), 
+    "/", nrow(fishnet),
+    "(", round(100 * sum(fishnet$countBurglaries == 0) / nrow(fishnet), 1), "%)\n")
+```
+
 
 ```{r visualize-fishnet}
 #| fig-width: 5
@@ -271,7 +320,7 @@ calculate_local_morans <- function(data, variable, k = 5) {
     )
 }
 
-# Apply to garbage carts
+# Apply to garbage cart service counts
 fishnet <- calculate_local_morans(fishnet, "countcarts", k = 5)
 ```
 
@@ -347,16 +396,31 @@ chicago_income <- get_acs(
 summary(chicago_income$med_hh_income)
 
 # Join HH income information to fishnet
-fishnet <- st_join(
-  fishnet,
-  chicago_income,
-  join = st_intersects,
-  left = TRUE
-) %>%
-  filter(!is.na(uniqueID))  # Remove cells outside census tracts
+fishnet <- st_join(fishnet, chicago_income, join = st_intersects, left = TRUE) %>%
+  filter(!is.na(uniqueID)) %>%
+  group_by(uniqueID) %>%
+  summarize(
+    across(c(countcarts, carts.nn, dist_to_hotspot, countBurglaries), first),
+    med_hh_income = mean(med_hh_income, na.rm = TRUE)
+  )
 
 cat("✓ Joined Median Household Income\n")
 cat("  - Census Tracts:", length(unique(fishnet$uniqueID)), "\n")
+cat("  - Cells:", nrow(fishnet), "\n")
+```
+
+```{r join-districts}
+# Join district information to fishnet
+fishnet <- st_join(
+  fishnet,
+  policeDistricts,
+  join = st_within,
+  left = TRUE
+) %>%
+  filter(!is.na(District))  # Remove cells outside districts
+
+cat("✓ Joined police districts\n")
+cat("  - Districts:", length(unique(fishnet$District)), "\n")
 cat("  - Cells:", nrow(fishnet), "\n")
 ```
 
@@ -370,20 +434,22 @@ cat("  - Cells:", nrow(fishnet), "\n")
 # Create clean modeling dataset
 fishnet_model <- fishnet %>%
   st_drop_geometry() %>%
-  dplyr::select(
-    uniqueID,
-    countcarts,
-    carts.nn,
-    dist_to_hotspot,
-    med_hh_income
-  ) %>%
-  na.omit() %>% # Remove any remaining NAs
+  dplyr::select(uniqueID, District, countcarts, carts.nn,
+                dist_to_hotspot, med_hh_income, countBurglaries) %>%
+  mutate(across(everything(), as.numeric)) %>%
+  mutate(across(everything(), ~ifelse(!is.finite(.), NA, .))) %>%
+  na.omit() %>%
+  # ← Cap outliers at 99th percentile
   mutate(across(
-    c(carts.nn, dist_to_hotspot, med_hh_income),
+    c(countcarts, carts.nn, dist_to_hotspot, med_hh_income),
+    ~ pmin(., quantile(., 0.99, na.rm = TRUE))
+  )) %>%
+  mutate(across(
+    c(countcarts, carts.nn, dist_to_hotspot, med_hh_income),
     ~ as.numeric(scale(.)),
     .names = "{.col}_z"
-  )) # z-score
-
+  )) %>%
+  filter(if_all(ends_with("_z"), ~ is.finite(.)))
 # Verify clean
 fishnet_model %>%
   summarise(across(everything(),
@@ -397,7 +463,7 @@ cat("  - Variables:", ncol(fishnet_model), "\n")
 ```{r fit-poisson}
 # Fit Poisson regression
 model_poisson <- glm(
-  countcarts ~ carts.nn + dist_to_hotspot + med_hh_income,
+  countBurglaries ~ countcarts_z + carts.nn_z + dist_to_hotspot_z + med_hh_income_z,
   data = fishnet_model,
   family = "poisson"
 )
@@ -424,7 +490,7 @@ if (dispersion > 1.5) {
 ```{r fit-negbin}
 # Fit Negative Binomial model
 model_nb <- glm.nb(
-  countcarts ~ carts.nn + dist_to_hotspot + med_hh_income,
+  countBurglaries ~ countcarts_z + carts.nn_z + dist_to_hotspot_z + med_hh_income_z,
   data = fishnet_model,
   control = glm.control(maxit = 100)
 )
@@ -459,8 +525,7 @@ for (i in seq_along(districts)) {
   
   # Fit model on training data
   model_cv <- glm.nb(
-    countBurglaries ~ abandoned_cars + abandoned_cars.nn + 
-      dist_to_hotspot,
+    countBurglaries ~ countcarts_z + carts.nn_z + dist_to_hotspot_z + med_hh_income_z,
     data = train_data
   )
   
@@ -510,6 +575,117 @@ cv_results %>%
 #### Part 6: Model Evaluation
 - Compare to KDE baseline
 
+```{r kde-baseline}
+#| message: false
+
+# Convert burglaries to ppp (point pattern) format for spatstat
+burglaries_ppp <- as.ppp(
+  st_coordinates(burglaries),
+  W = as.owin(st_bbox(chicagoBoundary))
+)
+
+# Calculate KDE with 1km bandwidth
+kde_burglaries <- density.ppp(
+  burglaries_ppp,
+  sigma = 1000,  # 1k ft bandwidth
+  edge = TRUE    # Edge correction
+)
+
+# Convert to terra raster (modern approach, not raster::raster)
+kde_raster <- rast(kde_burglaries)
+
+# Extract KDE values to fishnet cells
+fishnet <- fishnet %>%
+  mutate(
+    kde_value = terra::extract(
+      kde_raster,
+      vect(fishnet),
+      fun = mean,
+      na.rm = TRUE
+    )[, 2]  # Extract just the values column
+  )
+
+cat("✓ Calculated KDE baseline\n")
+```
+
+```{r final-predictions}
+# Fit final model on all data
+final_model <- glm.nb(
+  countBurglaries ~ countcarts_z + carts.nn_z + dist_to_hotspot_z + med_hh_income_z,
+  data = fishnet_model
+)
+
+# Add predictions back to fishnet
+fishnet <- fishnet %>%
+  mutate(
+    prediction_nb = predict(final_model, fishnet_model, type = "response")[match(uniqueID, fishnet_model$uniqueID)]
+  )
+
+# Also add KDE predictions (normalize to same scale as counts)
+kde_sum <- sum(fishnet$kde_value, na.rm = TRUE)
+count_sum <- sum(fishnet$countBurglaries, na.rm = TRUE)
+fishnet <- fishnet %>%
+  mutate(
+    prediction_kde = (kde_value / kde_sum) * count_sum
+  )
+```
+
+```{r compare-models}
+#| fig-width: 12
+#| fig-height: 4
+
+# Create three maps
+p1 <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = countBurglaries), color = NA) +
+  scale_fill_viridis_c(name = "Count", option = "plasma", limits = c(0, 15)) +
+  labs(title = "Actual Burglaries") +
+  theme_void()
+
+p2 <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = prediction_nb), color = NA) +
+  scale_fill_viridis_c(name = "Predicted", option = "plasma", limits = c(0, 15)) +
+  labs(title = "Model Predictions (Neg. Binomial)") +
+  theme_void()
+
+p3 <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = prediction_kde), color = NA) +
+  scale_fill_viridis_c(name = "Predicted", option = "plasma", limits = c(0, 15)) +
+  labs(title = "KDE Baseline Predictions") +
+  theme_void()
+
+p1 + p2 + p3 +
+  plot_annotation(
+    title = "Actual vs. Predicted Burglaries",
+    subtitle = "Does our complex model outperform simple KDE?"
+  )
+```
+
+```{r model-comparison-metrics}
+# Calculate performance metrics
+comparison <- fishnet %>%
+  st_drop_geometry() %>%
+  filter(!is.na(prediction_nb), !is.na(prediction_kde)) %>%
+  summarize(
+    model_mae = mean(abs(countBurglaries - prediction_nb)),
+    model_rmse = sqrt(mean((countBurglaries - prediction_nb)^2)),
+    kde_mae = mean(abs(countBurglaries - prediction_kde)),
+    kde_rmse = sqrt(mean((countBurglaries - prediction_kde)^2))
+  )
+
+comparison %>%
+  pivot_longer(everything(), names_to = "metric", values_to = "value") %>%
+  separate(metric, into = c("approach", "metric"), sep = "_") %>%
+  pivot_wider(names_from = metric, values_from = value) %>%
+  kable(
+    digits = 2,
+    caption = "Model Performance Comparison"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+
+
+
 #### CHALLENGE TASK: Temporal Validation (2018) *not mandatory, only if you want very strong spatial analytics muscles*
 - Download 2018 crimes https://data.cityofchicago.org/Public-Safety/Crimes-2018/3i3m-jwuy/about_data
 - Be sure to filter for BURGLARIES (FORCED ENTRY only to match the 2017 data)
@@ -518,6 +694,28 @@ cv_results %>%
 - Calculate temporal validation metrics
 - Compare spatial vs. temporal validation performance
 
+```{r load crime}
+#| message: false
+#| warning: false
+
+# Load 2018 crime data
+crime_2018 <- read_csv("Crimes_-_2018_20260331.csv")
+
+burglaries_2018 <- crime_2018 %>%
+  filter("Primary Type" == "BURGLARY",
+         Description == "FORCIBLE ENTRY") %>%    # match 2017 data
+  filter(
+   !is.na(Longitude), !is.na(Latitude),
+   is.finite(Longitude), is.finite(Latitude),
+    Longitude != 0, Latitude != 0
+  ) %>%
+  st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) %>%
+  st_transform('ESRI:102271')
+
+cat("✓ Loaded 2018 burglaries\n")
+cat("  - Forcible entry burglaries:", nrow(burglaries_2018), "\n")
+
+```
 ---
 
 ## Step 3: Write Your Analysis
