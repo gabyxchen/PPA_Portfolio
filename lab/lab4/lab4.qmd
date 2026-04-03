@@ -251,7 +251,7 @@ ggplot() +
     breaks = c(0, 50, 200, 500, 800)
   ) +
   labs(
-    title = "Garbage Cart Counts by Grid Cell",
+    title = "Garbage Cart Service Request Counts by Grid Cell",
     subtitle = "500ft x 500ft cells, Chicago 2026"
   ) +
   theme_void()
@@ -346,7 +346,7 @@ ggplot() +
     name = "Cluster Type"
   ) +
   labs(
-    title = "Local Moran's I: Garbage Cart Clusters",
+    title = "Local Moran's I: Garbage Cart Service Request Clusters",
     subtitle = "High-High = Hot spots of disorder\nLow-Low = Cold spots of disorder"
   ) +
   theme_void()
@@ -505,7 +505,7 @@ cat("Negative Binomial AIC:", round(AIC(model_nb), 1), "\n")
 ```
 
 #### Part 5: Spatial Cross-Validation (2017)
-- Implement Leave-One-Group-Out cross-validation on 2026 data
+- Implement Leave-One-Group-Out cross-validation on 2017 data
 - Calculate and report error metrics (MAE, RMSE)
 
 ```{r spatial-cv}
@@ -584,7 +584,7 @@ burglaries_ppp <- as.ppp(
   W = as.owin(st_bbox(chicagoBoundary))
 )
 
-# Calculate KDE with 1km bandwidth
+# Calculate KDE with 1k ft bandwidth
 kde_burglaries <- density.ppp(
   burglaries_ppp,
   sigma = 1000,  # 1k ft bandwidth
