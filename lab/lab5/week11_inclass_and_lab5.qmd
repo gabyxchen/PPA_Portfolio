@@ -1,8 +1,8 @@
 ---
 title: "Bikeshare_SpaceTime_Prediction"
 subtitle: "CPLN 5080 - Spring 2026"
-author: "Your Name"
-date: today
+author: "Gab Chen"
+date: 4/7/2026
 format:
   html:
     code-fold: show
@@ -1282,8 +1282,7 @@ Write 1-2 paragraphs addressing:
     -   New features you added and why
     -   Critical reflection on deployment
 
-3. **HTML output** with results and visualizations
-
+3.  **HTML output** with results and visualizations
 
 ## Tips for Success
 
