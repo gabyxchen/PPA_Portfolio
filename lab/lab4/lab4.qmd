@@ -384,6 +384,7 @@ if (nrow(hotspots) > 0) {
 #| message: false
 #| cache: true
 #| warning: false
+#| include: false
 
 options(tigris_use_cache = TRUE)
 
