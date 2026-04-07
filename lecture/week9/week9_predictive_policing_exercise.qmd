@@ -207,8 +207,7 @@ p1 + p2 +
 
 **Question 1.2:** What spatial patterns do you observe? Are burglaries evenly distributed across Chicago? Where are the highest concentrations? What might explain these patterns?
 
-*Your answer here:*
-In 2017, burglaries clustered in both northern and southern Chicago. The highest concentration is in southeast Chicago. There are a lot of possible influences to these patterns, including the policing spatial bias, racial bias, unreported incidents, and trust in police department, etc.
+*Your answer here:* In 2017, burglaries clustered in both northern and southern Chicago. The highest concentration is in southeast Chicago. There are a lot of possible influences to these patterns, including the policing spatial bias, racial bias, unreported incidents, and trust in police department, etc.
 
 # Part 2: Create Fishnet Grid
 
@@ -245,8 +244,7 @@ cat("  - Cell area:", round(st_area(fishnet[1,])), "square feet\n")
 
 **Question 2.1:** Why do we use a regular grid instead of existing boundaries like neighborhoods or census tracts? What are the advantages and disadvantages of this approach?
 
-*Your answer here:*
-Fishnet controls the size of the analysis units. The advantags of fishnet approach are that it's a standardized approach in predictive policing and makes the spatial operations easier. The disadvantages are that it is arbitrary, and that it might split existing administrative and natural boundaries.
+*Your answer here:* Fishnet controls the size of the analysis units. The advantags of fishnet approach are that it's a standardized approach in predictive policing and makes the spatial operations easier. The disadvantages are that it is arbitrary, and that it might split existing administrative and natural boundaries.
 
 ## Exercise 2.2: Aggregate Burglaries to Grid
 
@@ -298,8 +296,7 @@ ggplot() +
 
 **Question 2.2:** What is the distribution of burglary counts across cells? Why do so many cells have zero burglaries? Is this distribution suitable for count regression? (Hint: look up overdispersion)
 
-*Your answer here:*
-There are a lot of zero counts and few high counts. Small cell sizes may increase the number of zero count cells. This distribution is suitable for a count regression model but not a basic Poisson model.
+*Your answer here:* There are a lot of zero counts and few high counts. Small cell sizes may increase the number of zero count cells. This distribution is suitable for a count regression model but not a basic Poisson model.
 
 # Part 3: Create a Kernel Density Baseline
 
@@ -360,8 +357,7 @@ ggplot() +
 
 **Question 3.1:** How does the KDE map compare to the count map? What does KDE capture well? What does it miss?
 
-*Your answer here:*
-KDE map has a much smaller variance than the count map. It captures 
+*Your answer here:* KDE map has a much smaller variance than the count map. It captures
 
 ::: callout-tip
 ## Why Start with KDE?
@@ -382,7 +378,7 @@ Now we'll create features that might help predict burglaries. We'll use "broken 
 ```{r load-abandoned-cars}
 #| message: false
 
-abandoned_cars <- read_csv(here("data/abandoned_cars_2017.csv"))%>%
+abandoned_cars <- read_csv("abandoned_cars_2017.csv") %>%
   filter(!is.na(Latitude), !is.na(Longitude)) %>%
   st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) %>%
   st_transform('ESRI:102271')

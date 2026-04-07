@@ -186,6 +186,8 @@ cat("  - Cell area:", round(st_area(fishnet[1,])), "square feet\n")
 ```
 
 ```{r aggregate-carts}
+#| message: false
+
 # Spatial join: which cell contains each garbage cart service request?
 cart_fishnet <- st_join(cart, fishnet, join = st_within) %>%
   st_drop_geometry() %>%
@@ -211,6 +213,8 @@ cat("\nCells with zero barbage cart requests:",
 ```
 
 ```{r aggregate-burglaries}
+#| message: false
+
 # Spatial join: which cell contains each burglary?
 burglaries_fishnet <- st_join(burglaries, fishnet, join = st_within) %>%
   st_drop_geometry() %>%
@@ -378,6 +382,10 @@ if (nrow(hotspots) > 0) {
 
 ```{r join-median HH income}
 #| message: false
+#| cache: true
+#| warning: false
+
+options(tigris_use_cache = TRUE)
 
 library(tidycensus)
 
@@ -709,80 +717,79 @@ comparison %>%
 
 In this project, I chose the 311 garbage carts service requests as my predictor variable to build a spatial predictive model for burglaries in Chicago.
 
-#### Part 1: Data Loading & Exploration
+#### **Part 1: Data Loading & Exploration**
 
-- Environmental Setup
-In environmental setup, I loaded the necessary packages for data manipulation and spatial analysis. I also configured options to disable scientific notation and ensure reproducibility for the subsequent analysis.
-Data Loading
-In data loading, four datasets including 311 garbage cart service requests (2026), Burglaries (2017), Chicago boundary, and police districts were loaded as sf objects and projected onto Illinois State Plane East, NAD83, US Feet (ESRI: 102271).
+- **Environmental Setup**
+  - In environmental setup, I loaded the necessary packages for data manipulation and spatial analysis. I also configured options to disable scientific notation and ensure reproducibility for the subsequent analysis.
 
-- Visualization: Garbage Cart Service Requests in Chicago
-By plotting 311 garbage cart service requests as point features across Chicago, we gained an initial understanding of their spatial distribution and established a basis for comparison using either kernel density estimation or aggregation by fishnet grids across Chicago.
+- **Data Loading**
+  - In data loading, four datasets including 311 garbage cart service requests (2026), Burglaries (2017), Chicago boundary, and police districts were loaded as sf objects and projected onto Illinois State Plane East, NAD83, US Feet (ESRI: 102271).
 
-#### Part 2: Fishnet Grid Creation
+- **Visualization: Garbage Cart Service Requests in Chicago**
+  - By plotting 311 garbage cart service requests as point features across Chicago, we gained an initial understanding of their spatial distribution and established a basis for comparison using either kernel density estimation or aggregation by fishnet grids across Chicago.
 
-- Create Fishnet
-To create a fishnet for data aggregation, we used the st_make_grid function to generate 500 × 500 ft cells across the Chicago boundary and projected them into ESRI:102271. Only cells that intersect the city boundary were retained for analysis, and each cell were assigned a unique ID based on its row number.
+#### **Part 2: Fishnet Grid Creation**
 
-- Data Aggregation
-Once the fishnet cells were created, we used the st_join function to attach 311 cart service requests and burglary data within the Chicago boundary to the grid. Each cell was then assigned two new variables representing the counts of service requests and burglaries occurring within it. These aggregated values were subsequently joined back to the fishnet. All the NAs were replaced by 0 to avoid data manipulation error.
+- **Create Fishnet**
+  - To create a fishnet for data aggregation, we used the st_make_grid function to generate 500 × 500 ft cells across the Chicago boundary and projected them into ESRI:102271. Only cells that intersect the city boundary were retained for analysis, and each cell were assigned a unique ID based on its row number.
 
-- Visualization: Garbage Cart Service Request Counts by Grid Cell
-By mapping 311 garbage cart service requests aggregated at the grid-cell level across Chicago, we gained a clearer understanding of their spatial disparities by analyzing count data within a standardized spatial unit.
+- **Data Aggregation**
+  - Once the fishnet cells were created, we used the st_join function to attach 311 cart service requests and burglary data within the Chicago boundary to the grid. Each cell was then assigned two new variables representing the counts of service requests and burglaries occurring within it. These aggregated values were subsequently joined back to the fishnet. All the NAs were replaced by 0 to avoid data manipulation error.
 
-#### Part 3: Spatial Features
+- **Visualization: Garbage Cart Service Request Counts by Grid Cell**
+  - By mapping 311 garbage cart service requests aggregated at the grid-cell level across Chicago, we gained a clearer understanding of their spatial disparities by analyzing count data within a standardized spatial unit.
 
-- NN-Feature
-To use distance to garbage cart service requests as a predictive variable, the mean distance to multiple requests is more informative than the distance to a single request. We therefore extracted the centroid coordinates of the fishnet grid cells and the locations of all service requests across Chicago and used the get.knn function to calculate the mean distance from each grid cell to its three nearest service requests. This value was then added to the fishnet dataset as a new variable, carts.nn.
+#### **Part 3: Spatial Features**
 
-- Local Moran’s I
-To examine clustering patterns of garbage cart service requests in Chicago, we calculated Local Moran’s I for each fishnet grid cell based on its five nearest neighbors. Each cell was then classified into a Moran’s I class according to its Local Moran’s I value and corresponding p-value. Both the Local Moran’s I statistics and its cluster classification were subsequently appended to the fishnet dataset.
+- **NN-Feature**
+  - To use distance to garbage cart service requests as a predictive variable, the mean distance to multiple requests is more informative than the distance to a single request. We therefore extracted the centroid coordinates of the fishnet grid cells and the locations of all service requests across Chicago and used the get.knn function to calculate the mean distance from each grid cell to its three nearest service requests. This value was then added to the fishnet dataset as a new variable, carts.nn.
 
-- Visualization: Garbage Cart Service Request Clusters
-By plotting the garbage cart service request clusters across Chicago by Moran’s I class, we identified spatial patterns of clustering, including areas of high-high and low-low concentrations, as well as potential spatial outliers.
+- **Local Moran’s I**
+  - To examine clustering patterns of garbage cart service requests in Chicago, we calculated Local Moran’s I for each fishnet grid cell based on its five nearest neighbors. Each cell was then classified into a Moran’s I class according to its Local Moran’s I value and corresponding p-value. Both the Local Moran’s I statistics and its cluster classification were subsequently appended to the fishnet dataset.
 
-- Distance to Hotspots
-To incorporate distance to hotspots as a predictive variable, we extracted the centroid coordinates of grid cells classified as “high–high” and calculated the distance from each cell to its nearest hotspot. This value was then added to the fishnet dataset as a new variable, dist_to_hotspot.
+- **Visualization: Garbage Cart Service Request Clusters**
+  - By plotting the garbage cart service request clusters across Chicago by Moran’s I class, we identified spatial patterns of clustering, including areas of high-high and low-low concentrations, as well as potential spatial outliers.
 
-- Add Additional Variable: Median Household Income
-To add an additional contextual predictive variable to the model, we obtained median household income by census tract in Chicago and projected the data into ESRI:102271. The dataset was then joined to the fishnet grid. To prevent duplication during the join, we collapsed repeated entries using group_by(). For grid cells intersecting multiple tracts, the median household income was averaged across the overlapping tracts.
+- **Distance to Hotspots**
+  - To incorporate distance to hotspots as a predictive variable, we extracted the centroid coordinates of grid cells classified as “high–high” and calculated the distance from each cell to its nearest hotspot. This value was then added to the fishnet dataset as a new variable, dist_to_hotspot.
 
-- Join Police Districts
-To prepare the fishnet dataset for cross-validation, police districts were spatially joined to the grid. Cells that did not fall within any police district were removed to ensure consistency throughout the analysis.
+- **Add Additional Variable: Median Household Income**
+  - To add an additional contextual predictive variable to the model, we obtained median household income by census tract in Chicago and projected the data into ESRI:102271. The dataset was then joined to the fishnet grid. To prevent duplication during the join, we collapsed repeated entries using group_by(). For grid cells intersecting multiple tracts, the median household income was averaged across the overlapping tracts.
 
-#### Part 4: Count Regression Model
+- **Join Police Districts**
+  - To prepare the fishnet dataset for cross-validation, police districts were spatially joined to the grid. Cells that did not fall within any police district were removed to ensure consistency throughout the analysis.
 
-- Prepare Model Data
-Before building the model, we constructed a clean modeling dataset by retaining only the seven required variables: uniqueID, District, countcarts, carts.nn, dist_to_hotspot, med_hh_income, and countBurglaries. All variables were cast to numeric format, and any rows containing NA or infinite values were removed. To improve model stability and comparability, the four predictor variables (countcarts, carts.nn, dist_to_hotspot, and med_hh_income) were standardized using z-scores.
+#### **Part 4: Count Regression Model**
 
-- Poisson Regression Model
-A Poisson regression model was fitted to examine the relationship between burglary counts and the four standardized predictor variables described above. All predictors were statistically significant, and the model yielded an AIC value of 8261.3.
+- **Prepare Model Data**
+  - Before building the model, we constructed a clean modeling dataset by retaining only the seven required variables: uniqueID, District, countcarts, carts.nn, dist_to_hotspot, med_hh_income, and countBurglaries. All variables were cast to numeric format, and any rows containing NA or infinite values were removed. To improve model stability and comparability, the four predictor variables (countcarts, carts.nn, dist_to_hotspot, and med_hh_income) were standardized using z-scores.
+
+- **Poisson Regression Model**
+  - A Poisson regression model was fitted to examine the relationship between burglary counts and the four standardized predictor variables described above. All predictors were statistically significant, and the model yielded an AIC value of 8261.3.
 However, overdispersion was detected in the model, as the dispersion statistic of 2.95 went well above the rule-of-thumb threshold of 1.5. This suggests that alternative modeling approaches should be considered.
 
-- Negative Binomial Model
-In this model, the standardized count of garbage cart service requests was no longer statistically significant (p = 0.06). However, the negative binomial model achieved a lower AIC value of 722.3, indicating an improved model fit.
+- **Negative Binomial Model**
+  - In this model, the standardized count of garbage cart service requests was no longer statistically significant (p = 0.06). However, the negative binomial model achieved a lower AIC value of 722.3, indicating an improved model fit.
 
-#### Part 5: Spatial Cross-Validation
+#### **Part 5: Spatial Cross-Validation**
 
-- Leave-One-Group-Out Cross-Validation
-Standard k-fold cross-validation randomly splits observations into training and test sets, whereas leave-one-group-out cross-validation accounts for spatial structure by grouping data based on geographic units. To better evaluate model performance on unseen data, we partitioned the dataset by police districts, using each district as a holdout set in turn. A model (model_cv) was trained on the remaining districts and then evaluated on the held-out district. The results showed a mean MAE of 2.49 and a mean RMSE of 3.38 across all folds.
+- **Leave-One-Group-Out Cross-Validation**
+  - Standard k-fold cross-validation randomly splits observations into training and test sets, whereas leave-one-group-out cross-validation accounts for spatial structure by grouping data based on geographic units. To better evaluate model performance on unseen data, we partitioned the dataset by police districts, using each district as a holdout set in turn. A model (model_cv) was trained on the remaining districts and then evaluated on the held-out district. The results showed a mean MAE of 2.49 and a mean RMSE of 3.38 across all folds.
 
-- Visualization: CV-Results Table
-The LOGO cross-validation results by police districts were visualized in a table showing the number of folds, the test district, the number of fishnet cells, MAE, and RMSE.
+- **Visualization: CV-Results Table**
+  - The LOGO cross-validation results by police districts were visualized in a table showing the number of folds, the test district, the number of fishnet cells, MAE, and RMSE.
 
-#### Part 6: Model Evaluation
+#### **Part 6: Model Evaluation**
 
-- KDE Baseline Model
-To compare the negative binomial model with a KDE baseline, we first constructed the KDE model by converting burglary data into a point pattern format. A kernel density estimate with a 1,000 ft bandwidth was then computed, converted into a terra raster, and subsequently extracted to the corresponding fishnet cells.
+- **KDE Baseline Model**
+  - To compare the negative binomial model with a KDE baseline, we first constructed the KDE model by converting burglary data into a point pattern format. A kernel density estimate with a 1,000 ft bandwidth was then computed, converted into a terra raster, and subsequently extracted to the corresponding fishnet cells.
 To prepare the prediction results for model comparison, both the final model predictions and KDE predictions (normalized to the same scale as the count of burglaries) were joined back to the fishnet.
 
-- Visualization: Compare Models
-To compare model performance, we visualized actual burglary counts by fishnet cell alongside predictions from the negative binomial model and the KDE baseline.
+- **Visualization: Compare Models**
+  - To compare model performance, we visualized actual burglary counts by fishnet cell alongside predictions from the negative binomial model and the KDE baseline. The comparison reveals clear differences in spatial performance. The negative binomial model more effectively captures localized variations and aligns more closely with the observed distribution. In contrast, the KDE baseline produces a smoother surface that captures broader trends but tends to oversimplify spatial heterogeneity. Overall, the negative binomial model demonstrates greater accuracy in representing fine-grained spatial patterns than the KDE approach.
 
-The comparison reveals clear differences in spatial performance. The negative binomial model more effectively captures localized variations and aligns more closely with the observed distribution. In contrast, the KDE baseline produces a smoother surface that captures broader trends but tends to oversimplify spatial heterogeneity. Overall, the negative binomial model demonstrates greater accuracy in representing fine-grained spatial patterns than the KDE approach.
-
-- Visualization: Model Comparison Metrics Table
-To statistically compare the negative binomial model and the KDE baseline, we compiled a table reporting their MAE and RMSE values.
+- **Visualization: Model Comparison Metrics Table**
+  - To statistically compare the negative binomial model and the KDE baseline, we compiled a table reporting their MAE and RMSE values.
 
 ---
 
