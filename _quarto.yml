@@ -21,6 +21,8 @@ website:
             text: "Midterm Challenge: Philadelphia Housing Price Prediction"
           - href: lab/lab4/lab4.qmd
             text: "Lab 4: Spatial Predictive Analysis"
+          - href: lab/lab5/week11_inclass_and_lab5.qmd
+            text: "Lab 5: Bikeshare_SpaceTime_Prediction"
 
 
 format:
