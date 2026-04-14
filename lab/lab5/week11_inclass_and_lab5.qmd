@@ -1164,12 +1164,206 @@ For Homework 5, you'll work either all byyyy yourself or in teams of 2 to:
 
 1.  **Download data** for Q2, Q3, or Q4 2024 from: https://www.rideindego.com/about/data/
 
+# IMPORT AND PREP DATA
+
+## Load Indego Trip Data (Q1 2025)
+```{r load_indego}
+# Read Q3 2025 data
+indego3 <- read_csv("data/indego-trips-2025-q3.csv")
+
+# Quick look at the data
+glimpse(indego3)
+```
+
+## Examine the Data Structure
+
+```{r explore_data}
+# How many trips?
+cat("Total trips in Q1 2025:", nrow(indego3), "\n")
+
+# Date range
+cat("Date range:", 
+    min(mdy_hm(indego3$start_time)), "to", 
+    max(mdy_hm(indego3$start_time)), "\n")
+
+# How many unique stations?
+cat("Unique start stations:", length(unique(indego3$start_station)), "\n")
+
+# Trip types
+table(indego3$trip_route_category)
+
+# Passholder types
+table(indego3$passholder_type)
+
+# Bike types
+table(indego3$bike_type)
+```
+
+## Create Time Bins
+
+We need to aggregate trips into hourly intervals for our panel data structure. Read up on the lubridate library for more information on the date/time data extraction.
+
+```{r create-time-bins}
+indego3 <- indego3 %>%
+  mutate(
+    # Parse datetime
+    start_datetime = mdy_hm(start_time),
+    end_datetime = mdy_hm(end_time),
+    
+    # Create hourly bins
+    interval60 = floor_date(start_datetime, unit = "hour"),
+    
+    # Extract time features
+    week = week(interval60),
+    month = month(interval60, label = TRUE),
+    dotw = wday(interval60, label = TRUE),
+    hour = hour(interval60),
+    date = as.Date(interval60),
+    
+    # Create useful indicators
+    weekend = ifelse(dotw %in% c("Sat", "Sun"), 1, 0),
+    rush_hour = ifelse(hour %in% c(7, 8, 9, 16, 17, 18), 1, 0)
+  )
+
+# Look at temporal features
+head(indego3 %>% select(start_datetime, interval60, week, dotw, hour, weekend))
+```
+
+#EDA OF INDEGO DATA
+
+## Trips Over Time
+
+```{r trips_over_time}
+#| message: false
+#| warning: false
+
+# Daily trip counts
+daily_trips <- indego3 %>%
+  group_by(date) %>%
+  summarize(trips = n())
+
+ggplot(daily_trips, aes(x = date, y = trips)) +
+  geom_line(color = "#3182bd", linewidth = 1) +
+  geom_smooth(se = FALSE, color = "red", linetype = "dashed") +
+  labs(
+    title = "Indego Daily Ridership - Q3 2025",
+    subtitle = "Summer demand patterns in Philadelphia",
+    x = "Date",
+    y = "Daily Trips",
+    caption = "Source: Indego bike share"
+  ) +
+  plotTheme
+```
+
+## Hourly Patterns
+
+```{r hourly_patterns}
+# Average trips by hour and day type
+hourly_patterns3 <- indego3 %>%
+  group_by(hour, weekend) %>%
+  summarize(avg_trips = n() / n_distinct(date)) %>%
+  mutate(day_type = ifelse(weekend == 1, "Weekend", "Weekday"))
+
+ggplot(hourly_patterns3, aes(x = hour, y = avg_trips, color = day_type)) +
+  geom_line(linewidth = 1.2) +
+  scale_color_manual(values = c("Weekday" = "#08519c", "Weekend" = "#6baed6")) +
+  labs(
+    title = "Average Hourly Ridership Patterns",
+    subtitle = "Clear commute patterns on weekdays",
+    x = "Hour of Day",
+    y = "Average Trips per Hour",
+    color = "Day Type"
+  ) +
+  plotTheme
+```
+
+
 2.  **Adapt this code** to work with your quarter:
 
     -   Update date ranges for weather data
     -   Check for any data structure changes
     -   Create the same 5 models
     -   Calculate MAE for each model
+    
+## Update Weather Data
+
+Weather significantly affects bike share demand! Let's get hourly weather for Philadelphia.
+
+```{r get_weather}
+# Get weather from Philadelphia International Airport (KPHL)
+# This covers Q3 2025: July 1 - September 31
+weather_data3 <- riem_measures(
+  station = "PHL",  # Philadelphia International Airport
+  date_start = "2025-07-01",
+  date_end = "2025-09-30"
+)
+
+# Process weather data
+weather_processed3 <- weather_data3 %>%
+  mutate(
+    interval60 = floor_date(valid, unit = "hour"),
+    Temperature = tmpf,  # Temperature in Fahrenheit
+    Precipitation = ifelse(is.na(p01i), 0, p01i),  # Hourly precip in inches
+    Wind_Speed = sknt  # Wind speed in knots
+  ) %>%
+  select(interval60, Temperature, Precipitation, Wind_Speed) %>%
+  distinct(interval60, .keep_all = TRUE)
+
+# Check for missing hours and interpolate if needed
+weather_complete3 <- weather_processed3 %>%
+  complete(interval60 = seq(min(interval60), max(interval60), by = "hour")) %>%
+  fill(Temperature, Precipitation, Wind_Speed, .direction = "down")
+
+# Look at the weather
+summary(weather_complete3 %>% select(Temperature, Precipitation, Wind_Speed))
+```
+
+## Visualize Weather Patterns
+
+Who is glad it's Spring!?
+
+```{r visualize-weather}
+#| message: false
+#| warning: false
+#| 
+ggplot(weather_complete3, aes(x = interval60, y = Temperature)) +
+  geom_line(color = "#3182bd", alpha = 0.7) +
+  geom_smooth(se = FALSE, color = "red") +
+  labs(
+    title = "Philadelphia Temperature - Q3 2025",
+    subtitle = "Summer to early Autumn transition",
+    x = "Date",
+    y = "Temperature (°F)"
+  ) +
+  plotTheme
+```
+
+# CREATE SPACE-TIME PANEL
+
+## Aggregate Trips to Station-Hour Level
+
+```{r aggregate-trips}
+#| message: false
+#| warning: false
+
+# Count trips by station-hour
+trips_panel3 <- indego_census %>%
+  group_by(interval60, start_station, start_lat, start_lon,
+           Med_Inc, Percent_Taking_Transit, Percent_White, Total_Pop) %>%
+  summarize(Trip_Count = n()) %>%
+  ungroup()
+
+# How many station-hour observations?
+nrow(trips_panel3)
+
+# How many unique stations?
+length(unique(trips_panel3$start_station))
+
+# How many unique hours?
+length(unique(trips_panel3$interval60))
+
+hist(trips_panel3$Trip_Count)
+```
 
 3.  **Compare results** to Q1 2025:
 

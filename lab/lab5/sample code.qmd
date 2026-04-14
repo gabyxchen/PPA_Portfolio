@@ -18,7 +18,6 @@ execute:
   message: false
 ---
 
-
 # INTRODUCTION
 
 ## The Rebalancing Challenge in Philadelphia
@@ -114,8 +113,7 @@ indego <- read_csv("data/indego-trips-2025-q1.csv")
 glimpse(indego)
 ```
 
-**Pause here** Look at the data. What do you suspect the coordinate system is? What do you notice about the date and time structure?
-The data is possibly in WGS 84 coordinate system because it contains longitude and latitude data. Data and time structure is in "M/D/Y H:MM".
+**Pause here** Look at the data. What do you suspect the coordinate system is? What do you notice about the date and time structure? The data is possibly in WGS 84 coordinate system because it contains longitude and latitude data. Data and time structure is in "M/D/Y H:MM".
 
 ## Examine the Data Structure
 
@@ -171,8 +169,7 @@ indego <- indego %>%
 head(indego %>% select(start_datetime, interval60, week, dotw, hour, weekend))
 ```
 
-**Question** Explain the interval60 feature to someone else at your table.
-The interval60 feature creates a new column that truncates each timestamp down to the hour, effectively grouping observations into 60-minute bins. Each observation that fall within the same hour gets a same label for the interval60 column.
+**Question** Explain the interval60 feature to someone else at your table. The interval60 feature creates a new column that truncates each timestamp down to the hour, effectively grouping observations into 60-minute bins. Each observation that fall within the same hour gets a same label for the interval60 column.
 
 #EDA OF INDEGO DATA
 
@@ -242,8 +239,7 @@ ggplot(hourly_patterns, aes(x = hour, y = avg_trips, color = day_type)) +
   plotTheme
 ```
 
-**Question:** When are the peak hours? How do weekends differ from weekdays?
-On weekdays, peak hours are 7-8am and 17-18pm. Weekends do not show clear peak hour patterns.
+**Question:** When are the peak hours? How do weekends differ from weekdays? On weekdays, peak hours are 7-8am and 17-18pm. Weekends do not show clear peak hour patterns.
 
 ## Top Stations
 
@@ -330,8 +326,7 @@ ggplot() +
   mapTheme
 ```
 
-**Question** These data are in WGS84. If you wanted to calculate a spatial distance-based variable, like a buffer, should you use the dataset as it?
-We should project the dataset onto a state plane coordinate system.
+**Question** These data are in WGS84. If you wanted to calculate a spatial distance-based variable, like a buffer, should you use the dataset as it? We should project the dataset onto a state plane coordinate system.
 
 ## Join Census Data to Stations
 
