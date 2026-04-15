@@ -1179,7 +1179,7 @@ glimpse(indego3)
 
 ```{r explore_data}
 # How many trips?
-cat("Total trips in Q1 2025:", nrow(indego3), "\n")
+cat("Total trips in Q3 2025:", nrow(indego3), "\n")
 
 # Date range
 cat("Date range:", 
@@ -1238,11 +1238,11 @@ head(indego3 %>% select(start_datetime, interval60, week, dotw, hour, weekend))
 #| warning: false
 
 # Daily trip counts
-daily_trips <- indego3 %>%
+daily_trips3 <- indego3 %>%
   group_by(date) %>%
   summarize(trips = n())
 
-ggplot(daily_trips, aes(x = date, y = trips)) +
+ggplot(daily_trips3, aes(x = date, y = trips)) +
   geom_line(color = "#3182bd", linewidth = 1) +
   geom_smooth(se = FALSE, color = "red", linetype = "dashed") +
   labs(
@@ -1320,8 +1320,6 @@ summary(weather_complete3 %>% select(Temperature, Precipitation, Wind_Speed))
 
 ## Visualize Weather Patterns
 
-Who is glad it's Spring!?
-
 ```{r visualize-weather}
 #| message: false
 #| warning: false
@@ -1337,6 +1335,41 @@ ggplot(weather_complete3, aes(x = interval60, y = Temperature)) +
   ) +
   plotTheme
 ```
+## Join Census Data to Stations
+
+We'll spatially join census characteristics to each bike station.
+
+```{r join_census_to_stations}
+# Create sf object for stations
+stations_sf3 <- indego3 %>%
+  distinct(start_station, start_lat, start_lon) %>%
+  filter(!is.na(start_lat), !is.na(start_lon)) %>%
+  st_as_sf(coords = c("start_lon", "start_lat"), crs = 4326)
+
+# Spatial join to get census tract for each station
+stations_census3 <- st_join(stations_sf3, philly_census, left = TRUE) %>%
+  st_drop_geometry()
+
+# Look at the result - investigate whether all of the stations joined to census data -- according to the map above there are stations in non-residential tracts.
+
+stations_for_map3 <- indego3 %>%
+  distinct(start_station, start_lat, start_lon) %>%
+  filter(!is.na(start_lat), !is.na(start_lon)) %>%
+  left_join(
+    stations_census %>% select(start_station, Med_Inc),
+    by = "start_station"
+  ) %>%
+  mutate(has_census = !is.na(Med_Inc))
+
+# Add back to trip data
+indego_census3 <- indego3 %>%
+  left_join(
+    stations_census3 %>% 
+      select(start_station, Med_Inc, Percent_Taking_Transit, 
+             Percent_White, Total_Pop),
+    by = "start_station"
+  )
+```
 
 # CREATE SPACE-TIME PANEL
 
@@ -1347,7 +1380,7 @@ ggplot(weather_complete3, aes(x = interval60, y = Temperature)) +
 #| warning: false
 
 # Count trips by station-hour
-trips_panel3 <- indego_census %>%
+trips_panel3 <- indego_census3 %>%
   group_by(interval60, start_station, start_lat, start_lon,
            Med_Inc, Percent_Taking_Transit, Percent_White, Total_Pop) %>%
   summarize(Trip_Count = n()) %>%
@@ -1363,6 +1396,87 @@ length(unique(trips_panel3$start_station))
 length(unique(trips_panel3$interval60))
 
 hist(trips_panel3$Trip_Count)
+```
+
+## Create Complete Panel Structure
+
+Not every station has trips every hour. We need a **complete panel** where every station-hour combination exists (even if Trip_Count = 0).
+
+```{r complete-panel}
+# Calculate expected panel size
+n_stations3 <- length(unique(trips_panel3$start_station))
+n_hours3 <- length(unique(trips_panel$interval60))
+expected_rows3 <- n_stations3 * n_hours3
+
+cat("Expected panel rows:", format(expected_rows3, big.mark = ","), "\n")
+cat("Current rows:", format(nrow(trips_panel3), big.mark = ","), "\n")
+cat("Missing rows:", format(expected_rows3 - nrow(trips_panel3), big.mark = ","), "\n")
+
+# Create complete panel
+study_panel3 <- expand_grid(
+  interval60 = unique(trips_panel3$interval60),
+  start_station = unique(trips_panel3$start_station)
+) %>%
+  # Join trip counts
+  left_join(trips_panel3 %>% 
+              select(interval60, start_station, Trip_Count),
+            by = c("interval60", "start_station")) %>%
+  # Replace NA trip counts with 0
+  mutate(Trip_Count = replace_na(Trip_Count, 0))
+
+glimpse(study_panel3)
+hist(study_panel3$Trip_Count)
+
+# Fill in station attributes (they're the same for all hours)
+station_attributes3 <- trips_panel3 %>%
+  group_by(start_station) %>%
+  summarize(
+    start_lat = first(start_lat),
+    start_lon = first(start_lon),
+    Med_Inc = first(Med_Inc),
+    Percent_Taking_Transit = first(Percent_Taking_Transit),
+    Percent_White = first(Percent_White),
+    Total_Pop = first(Total_Pop)
+  )
+
+glimpse(station_attributes3)
+
+study_panel3 <- study_panel3 %>%
+  left_join(station_attributes3, by = "start_station")
+
+glimpse(study_panel3)
+
+# Verify we have complete panel
+cat("Complete panel rows:", format(nrow(study_panel3), big.mark = ","), "\n")
+```
+
+## Add Time Features
+
+```{r add_time_features}
+study_panel3 <- study_panel3 %>%
+  mutate(
+    week = week(interval60),
+    month = month(interval60, label = TRUE),
+    dotw = wday(interval60, label = TRUE),
+    hour = hour(interval60),
+    date = as.Date(interval60),
+    weekend = ifelse(dotw %in% c("Sat", "Sun"), 1, 0),
+    rush_hour = ifelse(hour %in% c(7, 8, 9, 16, 17, 18), 1, 0)
+  )
+
+glimpse(study_panel3)
+```
+
+## Join Weather Data
+
+```{r join_weather}
+study_panel3 <- study_panel3 %>%
+  left_join(weather_complete3, by = "interval60")
+
+glimpse(study_panel3)
+
+# Check for missing values
+summary(study_panel3 %>% select(Trip_Count, Temperature, Precipitation))
 ```
 
 3.  **Compare results** to Q1 2025:
