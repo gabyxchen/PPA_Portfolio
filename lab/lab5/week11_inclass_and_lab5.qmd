@@ -1371,6 +1371,28 @@ indego_census3 <- indego3 %>%
   )
 ```
 
+## Dealing with missing data
+
+We need to decide what to do with the non-residential bike share stations. For this example, we are going to remove them -- this is not necessarily the right way to do things always, but for the sake of simplicity, we are narrowing our scope to only stations in residential neighborhoods. We might opt to create a separate model for non-residential stations..
+
+```{r}
+# Identify which stations to keep
+valid_stations3 <- stations_census3 %>%
+  filter(!is.na(Med_Inc)) %>%
+  pull(start_station) # extracts a single column from a dataframe as a vector (rather than a dataframe)
+
+# Filter trip data to valid stations only
+indego_census3 <- indego3 %>%
+  filter(start_station %in% valid_stations) %>%
+  left_join(
+    stations_census3 %>% 
+      select(start_station, Med_Inc, Percent_Taking_Transit, 
+             Percent_White, Total_Pop),
+    by = "start_station"
+  )
+
+```
+
 # CREATE SPACE-TIME PANEL
 
 ## Aggregate Trips to Station-Hour Level
@@ -1405,7 +1427,7 @@ Not every station has trips every hour. We need a **complete panel** where every
 ```{r complete-panel}
 # Calculate expected panel size
 n_stations3 <- length(unique(trips_panel3$start_station))
-n_hours3 <- length(unique(trips_panel$interval60))
+n_hours3 <- length(unique(trips_panel3$interval60))
 expected_rows3 <- n_stations3 * n_hours3
 
 cat("Expected panel rows:", format(expected_rows3, big.mark = ","), "\n")
@@ -1477,6 +1499,252 @@ glimpse(study_panel3)
 
 # Check for missing values
 summary(study_panel3 %>% select(Trip_Count, Temperature, Precipitation))
+```
+
+# CREATE TEMPORAL LAG VARIABLES
+
+The key innovation for space-time prediction: **past demand predicts future demand**.
+
+## Why Temporal Lags?
+
+If there were 15 bike trips from Station A at 8:00 AM, there will probably be \~15 trips at 9:00 AM. We can use this temporal persistence to improve predictions.
+
+**Note:** We still can't use spatial lags in prediction. Temporal lags are different because time moves in one direction - past predicts the future, but the future does not predict the past. Spatial lags are non-directional and create circular prediction logic.
+
+Temporal lags: good Spatial lags: bad!
+
+```{r create_lags}
+# Sort by station and time
+study_panel3 <- study_panel3 %>%
+  arrange(start_station, interval60)
+
+# Create lag variables WITHIN each station
+study_panel3 <- study_panel3 %>%
+  group_by(start_station) %>%
+  mutate(
+    lag1Hour = lag(Trip_Count, 1),
+    lag2Hours = lag(Trip_Count, 2),
+    lag3Hours = lag(Trip_Count, 3),
+    lag12Hours = lag(Trip_Count, 12),
+    lag1day = lag(Trip_Count, 24)
+  ) %>%
+  ungroup()
+
+# Remove rows with NA lags (first 24 hours for each station)
+study_panel_complete3 <- study_panel3 %>%
+  filter(!is.na(lag1day))
+
+cat("Rows after removing NA lags:", format(nrow(study_panel_complete3), big.mark = ","), "\n")
+```
+
+## Visualize Lag Correlations
+
+```{r lag_correlations}
+# Sample one station to visualize
+example_station3 <- study_panel_complete3 %>%
+  filter(start_station == first(start_station)) %>%
+  head(168)  # One week
+
+# Plot actual vs lagged demand
+ggplot(example_station3, aes(x = interval60)) +
+  geom_line(aes(y = Trip_Count, color = "Current"), linewidth = 1) +
+  geom_line(aes(y = lag1Hour, color = "1 Hour Ago"), linewidth = 1, alpha = 0.7) +
+  geom_line(aes(y = lag1day, color = "24 Hours Ago"), linewidth = 1, alpha = 0.7) +
+  scale_color_manual(values = c(
+    "Current" = "#08519c",
+    "1 Hour Ago" = "#3182bd",
+    "24 Hours Ago" = "#6baed6"
+  )) +
+  labs(
+    title = "Temporal Lag Patterns at One Station",
+    subtitle = "Past demand predicts future demand",
+    x = "Date-Time",
+    y = "Trip Count",
+    color = "Time Period"
+  ) +
+  plotTheme
+```
+
+# TEMPORAL TRAIN/TEST SPLIT
+
+**CRITICAL:** We must train on PAST data and test on FUTURE data!
+
+## Why Temporal Validation Matters
+
+In real operations, at 6:00 AM on March 15, we need to predict demand for March 15-31. We have data from Jan 1 - March 14, but NOT from March 15-31 (it hasn't happened yet!).
+
+**Wrong approach:** Train on weeks 10-13, test on weeks 1-9 (predicting past from future!)
+
+**Correct approach:** Train on weeks 1-9, test on weeks 10-13 (predicting future from past)
+
+```{r temporal-split}
+# Split by week
+# Q3 has weeks 27-39 (Jul-Sept)
+# Train on weeks 27-35 (Jul 1 - early Sept)
+# Test on weeks 36-39 (rest of September)
+
+# Which stations have trips in BOTH early and late periods?
+early_stations3 <- study_panel_complete3 %>%
+  filter(week < 36) %>%
+  filter(Trip_Count > 0) %>%
+  distinct(start_station) %>%
+  pull(start_station)
+
+late_stations3 <- study_panel_complete3 %>%
+  filter(week >= 36) %>%
+  filter(Trip_Count > 0) %>%
+  distinct(start_station) %>%
+  pull(start_station)
+
+# Keep only stations that appear in BOTH periods
+common_stations3 <- intersect(early_stations3, late_stations3)
+
+
+# Filter panel to only common stations
+study_panel_complete3 <- study_panel_complete3 %>%
+  filter(start_station %in% common_stations3)
+
+# NOW create train/test split
+train3 <- study_panel_complete3 %>%
+  filter(week < 36)
+
+test3 <- study_panel_complete3 %>%
+  filter(week >= 36)
+
+cat("Training observations:", format(nrow(train3), big.mark = ","), "\n")
+cat("Testing observations:", format(nrow(test3), big.mark = ","), "\n")
+cat("Training date range:", min(train3$date), "to", max(train3$date), "\n")
+cat("Testing date range:", min(test3$date), "to", max(test3$date), "\n")
+
+```
+
+#BUILD PREDICTIVE MODELS
+
+We'll build 5 models with increasing complexity to see what improves predictions.
+
+## Model 6: Baseline (Time + Weather)
+
+```{r model6}
+
+# Create day of week factor with treatment (dummy) coding
+train3 <- train3 %>%
+  mutate(dotw_simple = factor(dotw, levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")))
+
+# Set contrasts to treatment coding (dummy variables)
+contrasts(train3$dotw_simple) <- contr.treatment(7)
+
+# Now run the model
+model6 <- lm(
+  Trip_Count ~ as.factor(hour) + dotw_simple + Temperature + Precipitation,
+  data = train3
+)
+
+summary(model6)
+```
+
+## Model 7: Add Temporal Lags
+
+```{r model2}
+model7 <- lm(
+  Trip_Count ~ as.factor(hour) + dotw_simple + Temperature + Precipitation +
+    lag1Hour + lag3Hours + lag1day,
+  data = train3
+)
+
+summary(model7)
+```
+
+## Model 8: Add Demographics
+
+```{r model8}
+model8 <- lm(
+  Trip_Count ~ as.factor(hour) + dotw_simple + Temperature + Precipitation +
+    lag1Hour + lag3Hours + lag1day +
+    Med_Inc + Percent_Taking_Transit + Percent_White,
+  data = train3
+)
+
+summary(model8)
+```
+
+## Model 4: Add Station Fixed Effects
+
+```{r model9}
+model9 <- lm(
+  Trip_Count ~ as.factor(hour) + dotw_simple + Temperature + Precipitation +
+    lag1Hour + lag3Hours + lag1day +
+    Med_Inc + Percent_Taking_Transit + Percent_White +
+    as.factor(start_station),
+  data = train3
+)
+
+# Summary too long with all station dummies, just show key metrics
+cat("Model 9 R-squared:", summary(model9)$r.squared, "\n")
+cat("Model 9 Adj R-squared:", summary(model9)$adj.r.squared, "\n")
+```
+
+## Model 10: Add Rush Hour Interaction
+
+```{r model5}
+model10 <- lm(
+  Trip_Count ~ as.factor(hour) + dotw_simple + Temperature + Precipitation +
+    lag1Hour + lag3Hours + lag1day + rush_hour + as.factor(month) +
+    Med_Inc + Percent_Taking_Transit + Percent_White +
+    as.factor(start_station) +
+    rush_hour * weekend,  # Rush hour effects different on weekends
+  data = train3
+)
+
+cat("Model 10 R-squared:", summary(model10)$r.squared, "\n")
+cat("Model 10 Adj R-squared:", summary(model10)$adj.r.squared, "\n")
+```
+
+# MODEL EVALUATION
+
+## Calculate Predictions and MAE
+
+```{r calculate_mae}
+# Get predictions on test set
+
+# Create day of week factor with treatment (dummy) coding
+test3 <- test3 %>%
+  mutate(dotw_simple = factor(dotw, levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")))
+
+# Set contrasts to treatment coding (dummy variables)
+contrasts(test3$dotw_simple) <- contr.treatment(7)
+
+test3 <- test3 %>%
+  mutate(
+    pred6 = predict(model6, newdata = test3),
+    pred7 = predict(model7, newdata = test3),
+    pred8 = predict(model8, newdata = test3),
+    pred9 = predict(model9, newdata = test3),
+    pred10 = predict(model10, newdata = test3)
+  )
+
+# Calculate MAE for each model
+mae_results3 <- data.frame(
+  Model = c(
+    "1. Time + Weather",
+    "2. + Temporal Lags",
+    "3. + Demographics",
+    "4. + Station FE",
+    "5. + Rush Hour Interaction"
+  ),
+  MAE = c(
+    mean(abs(test3$Trip_Count - test3$pred6), na.rm = TRUE),
+    mean(abs(test3$Trip_Count - test3$pred7), na.rm = TRUE),
+    mean(abs(test3$Trip_Count - test3$pred8), na.rm = TRUE),
+    mean(abs(test3$Trip_Count - test3$pred9), na.rm = TRUE),
+    mean(abs(test3$Trip_Count - test3$pred10), na.rm = TRUE)
+  )
+)
+
+kable(mae_results3, 
+      digits = 2,
+      caption = "Mean Absolute Error by Model (Test Set)",
+      col.names = c("Model", "MAE (trips)")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
 3.  **Compare results** to Q1 2025:
