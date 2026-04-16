@@ -1725,11 +1725,11 @@ test3 <- test3 %>%
 # Calculate MAE for each model
 mae_results3 <- data.frame(
   Model = c(
-    "1. Time + Weather",
-    "2. + Temporal Lags",
-    "3. + Demographics",
-    "4. + Station FE",
-    "5. + Rush Hour Interaction"
+    "6. Time + Weather",
+    "7. + Temporal Lags",
+    "8. + Demographics",
+    "9. + Station FE",
+    "10. + Rush Hour Interaction"
   ),
   MAE = c(
     mean(abs(test3$Trip_Count - test3$pred6), na.rm = TRUE),
@@ -1747,11 +1747,30 @@ kable(mae_results3,
   kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
+## Visualize Model Comparison
+
+```{r compare_models}
+ggplot(mae_results3, aes(x = reorder(Model, -MAE), y = MAE)) +
+  geom_col(fill = "#3182bd", alpha = 0.8) +
+  geom_text(aes(label = round(MAE, 2)), vjust = -0.5) +
+  labs(
+    title = "Model Performance Comparison",
+    subtitle = "Lower MAE = Better Predictions",
+    x = "Model",
+    y = "Mean Absolute Error (trips)"
+  ) +
+  plotTheme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
 3.  **Compare results** to Q1 2025:
 
-    -   How do MAE values compare? Why might they differ?
-    -   Are temporal patterns different (e.g., summer vs. winter)?
+    -   How do MAE values compare? Why might they differ? 
+      - MAE values go up for models based on Q3 data compared to models based on Q1 data. In Q1, cold weather supports low, flat, and relatively predictable demand; In Q3, warmer wearther creates more variance and spikes the model has no signal for.
+    -   Are temporal patterns different (e.g., summer vs. winter)? 
+      - Patterns by time of day and day of week are similar (AM and PM rush hours spike on weekdays and weekend demand is still dominated by midday activity), but overall demand doubles in warmer weather.
     -   Which features are most important in your quarter?
+      - Temporal lags are still the most important features in Q3 models.
 
 ## Part 2: Error Analysis
 
@@ -1761,7 +1780,9 @@ Analyze your model's errors in detail:
 
     -   Create error maps
     -   Identify neighborhoods with high errors
+      - The error map and demand map are nearly spatially identical. The model struggles most precisely where accurate prediction matters most.
     -   Hypothesize why (missing features? different demand patterns?)
+      - High-demand stations have more room to be wrong and these staions serve both commuters and tourists simultaneously.
 
 2.  **Temporal patterns:**
 
@@ -1774,6 +1795,176 @@ Analyze your model's errors in detail:
     -   Relate errors to census characteristics
     -   Are certain communities systematically harder to predict?
     -   What are the equity implications?
+
+# SPACE-TIME ERROR ANALYSIS
+
+## Observed vs. Predicted
+
+Let's use our best model (Model 7) for error analysis.
+
+```{r obs_vs_pred}
+#| message: false
+#| warning: false
+
+test3 <- test3 %>%
+  mutate(
+    error = Trip_Count - pred7,
+    abs_error = abs(error),
+    time_of_day = case_when(
+      hour < 7 ~ "Overnight",
+      hour >= 7 & hour < 10 ~ "AM Rush",
+      hour >= 10 & hour < 15 ~ "Mid-Day",
+      hour >= 15 & hour <= 18 ~ "PM Rush",
+      hour > 18 ~ "Evening"
+    )
+  )
+
+# Scatter plot by time and day type
+ggplot(test3, aes(x = Trip_Count, y = pred7)) +
+  geom_point(alpha = 0.2, color = "#3182bd") +
+  geom_abline(slope = 1, intercept = 0, color = "red", linewidth = 1) +
+  geom_smooth(method = "lm", se = FALSE, color = "darkgreen") +
+  facet_grid(weekend ~ time_of_day) +
+  labs(
+    title = "Observed vs. Predicted Bike Trips",
+    subtitle = "Model 7 performance by time period",
+    x = "Observed Trips",
+    y = "Predicted Trips",
+    caption = "Red line = perfect predictions; Green line = actual model fit"
+  ) +
+  plotTheme
+```
+
+## Spatial Error Patterns
+
+Are prediction errors clustered in certain parts of Philadelphia?
+
+```{r spatial_errors}
+# Calculate MAE by station
+station_errors3 <- test3 %>%
+  group_by(start_station, start_lat, start_lon) %>%
+  summarize(
+    MAE = mean(abs_error, na.rm = TRUE),
+    avg_demand = mean(Trip_Count, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  filter(!is.na(start_lat), !is.na(start_lon))
+
+## Create Two Maps Side-by-Side with Proper Legends (sorry these maps are ugly)
+
+# Calculate station errors
+station_errors3 <- test3 %>%
+  filter(!is.na(pred7)) %>%
+  group_by(start_station, start_lat, start_lon) %>%
+  summarize(
+    MAE = mean(abs(Trip_Count - pred7), na.rm = TRUE),
+    avg_demand = mean(Trip_Count, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  filter(!is.na(start_lat), !is.na(start_lon))
+
+# Map 1: Prediction Errors
+p1 <- ggplot() +
+  geom_sf(data = philly_census, fill = "grey95", color = "white", size = 0.2) +
+  geom_point(
+    data = station_errors3,
+    aes(x = start_lon, y = start_lat, color = MAE),
+    size = 3.5,
+    alpha = 0.7
+  ) +
+  scale_color_viridis(
+    option = "plasma",
+    name = "MAE\n(trips)",
+    direction = -1,
+    breaks = c(0.5, 1.0, 1.5),  # Fewer, cleaner breaks
+    labels = c("0.5", "1.0", "1.5")
+  ) +
+  labs(title = "Prediction Errors",
+       subtitle = "Higher in Center City") +
+  mapTheme +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(size = 10, face = "bold"),
+    legend.text = element_text(size = 9),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 10)
+  ) +
+  guides(color = guide_colorbar(
+    barwidth = 1.5,
+    barheight = 12,
+    title.position = "top",
+    title.hjust = 0.5
+  ))
+
+# Map 2: Average Demand
+p2 <- ggplot() +
+  geom_sf(data = philly_census, fill = "grey95", color = "white", size = 0.2) +
+  geom_point(
+    data = station_errors3,
+    aes(x = start_lon, y = start_lat, color = avg_demand),
+    size = 3.5,
+    alpha = 0.7
+  ) +
+  scale_color_viridis(
+    option = "viridis",
+    name = "Avg\nDemand",
+    direction = -1,
+    breaks = c(0.5, 1.0, 1.5, 2.0, 2.5),  # Clear breaks
+    labels = c("0.5", "1.0", "1.5", "2.0", "2.5")
+  ) +
+  labs(title = "Average Demand",
+       subtitle = "Trips per station-hour") +
+  mapTheme +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(size = 10, face = "bold"),
+    legend.text = element_text(size = 9),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 10)
+  ) +
+  guides(color = guide_colorbar(
+    barwidth = 1.5,
+    barheight = 12,
+    title.position = "top",
+    title.hjust = 0.5
+  ))
+
+
+# Combine
+(p1 | p2)
+
+```
+
+## Temporal Error Patterns
+
+When are we most wrong?
+
+```{r temporal_errors}
+# MAE by time of day and day type
+temporal_errors3 <- test3 %>%
+  group_by(time_of_day, weekend) %>%
+  summarize(
+    MAE = mean(abs_error, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(day_type = ifelse(weekend == 1, "Weekend", "Weekday"))
+
+ggplot(temporal_errors3, aes(x = time_of_day, y = MAE, fill = day_type)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c("Weekday" = "#08519c", "Weekend" = "#6baed6")) +
+  labs(
+    title = "Prediction Errors by Time Period",
+    subtitle = "When is the model struggling most?",
+    x = "Time of Day",
+    y = "Mean Absolute Error (trips)",
+    fill = "Day Type"
+  ) +
+  plotTheme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
 
 ## Part 3: Feature Engineering & model improvement
 
