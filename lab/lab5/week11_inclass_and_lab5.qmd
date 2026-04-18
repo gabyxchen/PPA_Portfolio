@@ -1418,7 +1418,7 @@ valid_stations3 <- stations_census3 %>%
 
 # Filter trip data to valid stations only
 indego_census3 <- indego3 %>%
-  filter(start_station %in% valid_stations) %>%
+  filter(start_station %in% valid_stations3) %>%
   left_join(
     stations_census3 %>% 
       select(start_station, Med_Inc, Percent_Taking_Transit, 
@@ -2116,24 +2116,24 @@ holiday_dates <- as.Date(c(
   "2025-09-01"
 ))
 # Holiday spillover effect
-train3 <- train3 %>%
-  mutate(
-    is_holiday = ifelse(
-      date %in% holiday_dates |
-      date %in% (holiday_dates - 1) |
-      date %in% (holiday_dates + 1),
-      1, 0
+add_features <- function(df) {
+  df %>%
+    mutate(
+      nice_weather = ifelse(
+        Temperature >= 60 & Temperature <= 75 & Precipitation == 0,
+        1, 0
+      ),
+      is_holiday = ifelse(
+        date %in% holiday_dates |
+        date %in% (holiday_dates - 1) |
+        date %in% (holiday_dates + 1),
+        1, 0
+      )
     )
-  )
-test3 <- test3 %>%
-  mutate(
-    is_holiday = ifelse(
-      date %in% holiday_dates |
-      date %in% (holiday_dates - 1) |
-      date %in% (holiday_dates + 1),
-      1, 0
-    )
-  )
+}
+
+train3 <- add_features(train3)
+test3  <- add_features(test3)
 
 
 ```
