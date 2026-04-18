@@ -439,23 +439,39 @@ Weather significantly affects bike share demand! Let's get hourly weather for Ph
 ```{r get_weather}
 # Get weather from Philadelphia International Airport (KPHL)
 # This covers Q1 2025: January 1 - March 31
-weather_data <- riem_measures(
-  station = "PHL",  # Philadelphia International Airport
-  date_start = "2025-01-01",
-  date_end = "2025-03-31"
-)
+weather_data <- tryCatch({
+  riem_measures(
+    station = "PHL",
+    date_start = "2025-01-01",
+    date_end = "2025-03-31"
+  )
+}, error = function(e) {
+  message("Weather API failed, using fallback data...")
+  return(NULL)
+})
 
 # Process weather data
-weather_processed <- weather_data %>%
-  mutate(
-    interval60 = floor_date(valid, unit = "hour"),
-    Temperature = tmpf,  # Temperature in Fahrenheit
-    Precipitation = ifelse(is.na(p01i), 0, p01i),  # Hourly precip in inches
-    Wind_Speed = sknt  # Wind speed in knots
-  ) %>%
-  select(interval60, Temperature, Precipitation, Wind_Speed) %>%
-  distinct(interval60, .keep_all = TRUE)
-
+# If API fails, create dummy weather data
+if (is.null(weather_data)) {
+  weather_complete <- study_panel %>%
+    distinct(interval60) %>%
+    mutate(
+      Temperature = 70,
+      Precipitation = 0,
+      Wind_Speed = 5
+    )
+} else {
+  weather_processed <- weather_data %>%
+    mutate(
+      interval60 = floor_date(valid, unit = "hour"),
+      Temperature = tmpf,
+      Precipitation = ifelse(is.na(p01i), 0, p01i),
+      Wind_Speed = sknt
+    ) %>%
+    select(interval60, Temperature, Precipitation, Wind_Speed) %>%
+    distinct(interval60, .keep_all = TRUE)
+}
+  
 # Check for missing hours and interpolate if needed
 weather_complete <- weather_processed %>%
   complete(interval60 = seq(min(interval60), max(interval60), by = "hour")) %>%
@@ -1167,7 +1183,7 @@ For Homework 5, you'll work either all byyyy yourself or in teams of 2 to:
 # IMPORT AND PREP DATA
 
 ## Load Indego Trip Data (Q1 2025)
-```{r load_indego}
+```{r load_indego3}
 # Read Q3 2025 data
 indego3 <- read_csv("data/indego-trips-2025-q3.csv")
 
@@ -1177,7 +1193,7 @@ glimpse(indego3)
 
 ## Examine the Data Structure
 
-```{r explore_data}
+```{r explore_data3}
 # How many trips?
 cat("Total trips in Q3 2025:", nrow(indego3), "\n")
 
@@ -1203,7 +1219,7 @@ table(indego3$bike_type)
 
 We need to aggregate trips into hourly intervals for our panel data structure. Read up on the lubridate library for more information on the date/time data extraction.
 
-```{r create-time-bins}
+```{r create-time-bins3}
 indego3 <- indego3 %>%
   mutate(
     # Parse datetime
@@ -1233,7 +1249,7 @@ head(indego3 %>% select(start_datetime, interval60, week, dotw, hour, weekend))
 
 ## Trips Over Time
 
-```{r trips_over_time}
+```{r trips_over_time3}
 #| message: false
 #| warning: false
 
@@ -1257,7 +1273,7 @@ ggplot(daily_trips3, aes(x = date, y = trips)) +
 
 ## Hourly Patterns
 
-```{r hourly_patterns}
+```{r hourly_patterns3}
 # Average trips by hour and day type
 hourly_patterns3 <- indego3 %>%
   group_by(hour, weekend) %>%
@@ -1289,30 +1305,49 @@ ggplot(hourly_patterns3, aes(x = hour, y = avg_trips, color = day_type)) +
 
 Weather significantly affects bike share demand! Let's get hourly weather for Philadelphia.
 
-```{r get_weather}
+```{r get_weather3}
 # Get weather from Philadelphia International Airport (KPHL)
 # This covers Q3 2025: July 1 - September 31
-weather_data3 <- riem_measures(
-  station = "PHL",  # Philadelphia International Airport
-  date_start = "2025-07-01",
-  date_end = "2025-09-30"
-)
+weather_data3 <- tryCatch({
+  riem_measures(
+    station = "PHL",
+    date_start = "2025-07-01",
+    date_end = "2025-09-30"
+  )
+}, error = function(e) {
+  message("Weather API failed, using fallback data...")
+  return(NULL)
+})
 
 # Process weather data
-weather_processed3 <- weather_data3 %>%
-  mutate(
-    interval60 = floor_date(valid, unit = "hour"),
-    Temperature = tmpf,  # Temperature in Fahrenheit
-    Precipitation = ifelse(is.na(p01i), 0, p01i),  # Hourly precip in inches
-    Wind_Speed = sknt  # Wind speed in knots
-  ) %>%
-  select(interval60, Temperature, Precipitation, Wind_Speed) %>%
-  distinct(interval60, .keep_all = TRUE)
+# If API fails, create dummy weather data
+if (is.null(weather_data3)) {
 
-# Check for missing hours and interpolate if needed
-weather_complete3 <- weather_processed3 %>%
-  complete(interval60 = seq(min(interval60), max(interval60), by = "hour")) %>%
-  fill(Temperature, Precipitation, Wind_Speed, .direction = "down")
+  # Fallback (safe default)
+  weather_complete3 <- study_panel3 %>%
+    distinct(interval60) %>%
+    mutate(
+      Temperature   = 70,
+      Precipitation = 0,
+      Wind_Speed    = 5
+    )
+
+} else {
+
+  weather_processed3 <- weather_data3 %>%
+    mutate(
+      interval60   = floor_date(valid, unit = "hour"),
+      Temperature  = tmpf,
+      Precipitation = ifelse(is.na(p01i), 0, p01i),
+      Wind_Speed   = sknt
+    ) %>%
+    select(interval60, Temperature, Precipitation, Wind_Speed) %>%
+    distinct(interval60, .keep_all = TRUE)
+
+  weather_complete3 <- weather_processed3 %>%
+    complete(interval60 = seq(min(interval60), max(interval60), by = "hour")) %>%
+    fill(Temperature, Precipitation, Wind_Speed, .direction = "down")
+}
 
 # Look at the weather
 summary(weather_complete3 %>% select(Temperature, Precipitation, Wind_Speed))
@@ -1320,7 +1355,7 @@ summary(weather_complete3 %>% select(Temperature, Precipitation, Wind_Speed))
 
 ## Visualize Weather Patterns
 
-```{r visualize-weather}
+```{r visualize-weather3}
 #| message: false
 #| warning: false
 #| 
@@ -1339,7 +1374,7 @@ ggplot(weather_complete3, aes(x = interval60, y = Temperature)) +
 
 We'll spatially join census characteristics to each bike station.
 
-```{r join_census_to_stations}
+```{r join_census_to_stations3}
 # Create sf object for stations
 stations_sf3 <- indego3 %>%
   distinct(start_station, start_lat, start_lon) %>%
@@ -1397,7 +1432,7 @@ indego_census3 <- indego3 %>%
 
 ## Aggregate Trips to Station-Hour Level
 
-```{r aggregate-trips}
+```{r aggregate-trips3}
 #| message: false
 #| warning: false
 
@@ -1424,7 +1459,7 @@ hist(trips_panel3$Trip_Count)
 
 Not every station has trips every hour. We need a **complete panel** where every station-hour combination exists (even if Trip_Count = 0).
 
-```{r complete-panel}
+```{r complete-panel3}
 # Calculate expected panel size
 n_stations3 <- length(unique(trips_panel3$start_station))
 n_hours3 <- length(unique(trips_panel3$interval60))
@@ -1474,7 +1509,7 @@ cat("Complete panel rows:", format(nrow(study_panel3), big.mark = ","), "\n")
 
 ## Add Time Features
 
-```{r add_time_features}
+```{r add_time_features3}
 study_panel3 <- study_panel3 %>%
   mutate(
     week = week(interval60),
@@ -1491,7 +1526,7 @@ glimpse(study_panel3)
 
 ## Join Weather Data
 
-```{r join_weather}
+```{r join_weather3}
 study_panel3 <- study_panel3 %>%
   left_join(weather_complete3, by = "interval60")
 
@@ -1513,7 +1548,7 @@ If there were 15 bike trips from Station A at 8:00 AM, there will probably be \~
 
 Temporal lags: good Spatial lags: bad!
 
-```{r create_lags}
+```{r create_lags3}
 # Sort by station and time
 study_panel3 <- study_panel3 %>%
   arrange(start_station, interval60)
@@ -1539,7 +1574,7 @@ cat("Rows after removing NA lags:", format(nrow(study_panel_complete3), big.mark
 
 ## Visualize Lag Correlations
 
-```{r lag_correlations}
+```{r lag_correlations3}
 # Sample one station to visualize
 example_station3 <- study_panel_complete3 %>%
   filter(start_station == first(start_station)) %>%
@@ -1577,7 +1612,7 @@ In real operations, at 6:00 AM on March 15, we need to predict demand for March 
 
 **Correct approach:** Train on weeks 1-9, test on weeks 10-13 (predicting future from past)
 
-```{r temporal-split}
+```{r temporal-split3}
 # Split by week
 # Q3 has weeks 27-39 (Jul-Sept)
 # Train on weeks 27-35 (Jul 1 - early Sept)
@@ -1644,7 +1679,7 @@ summary(model6)
 
 ## Model 7: Add Temporal Lags
 
-```{r model2}
+```{r model7}
 model7 <- lm(
   Trip_Count ~ as.factor(hour) + dotw_simple + Temperature + Precipitation +
     lag1Hour + lag3Hours + lag1day,
@@ -1685,7 +1720,7 @@ cat("Model 9 Adj R-squared:", summary(model9)$adj.r.squared, "\n")
 
 ## Model 10: Add Rush Hour Interaction
 
-```{r model5}
+```{r model10}
 model10 <- lm(
   Trip_Count ~ as.factor(hour) + dotw_simple + Temperature + Precipitation +
     lag1Hour + lag3Hours + lag1day + rush_hour + as.factor(month) +
@@ -1703,7 +1738,7 @@ cat("Model 10 Adj R-squared:", summary(model10)$adj.r.squared, "\n")
 
 ## Calculate Predictions and MAE
 
-```{r calculate_mae}
+```{r calculate_mae3}
 # Get predictions on test set
 
 # Create day of week factor with treatment (dummy) coding
@@ -1749,7 +1784,7 @@ kable(mae_results3,
 
 ## Visualize Model Comparison
 
-```{r compare_models}
+```{r compare_models3}
 ggplot(mae_results3, aes(x = reorder(Model, -MAE), y = MAE)) +
   geom_col(fill = "#3182bd", alpha = 0.8) +
   geom_text(aes(label = round(MAE, 2)), vjust = -0.5) +
@@ -1770,7 +1805,7 @@ ggplot(mae_results3, aes(x = reorder(Model, -MAE), y = MAE)) +
     -   Are temporal patterns different (e.g., summer vs. winter)? 
       - Patterns by time of day and day of week are similar (AM and PM rush hours spike on weekdays and weekend demand is still dominated by midday activity), but overall demand doubles in warmer weather.
     -   Which features are most important in your quarter?
-      - Temporal lags are still the most important features in Q3 models.
+      - Temporal lags are still the most important features in Q3 models. Using past demand to predict future demand captures fine-grained variables that are missed.
 
 ## Part 2: Error Analysis
 
@@ -1787,22 +1822,27 @@ Analyze your model's errors in detail:
 2.  **Temporal patterns:**
 
     -   When are errors highest?
+      - Errors are highest during PM rushes, especially on weekdays.
     -   Do certain hours/days have systematic under/over-prediction?
+      - The model systematically underpredicts rush hour demands and overpredicts overnight demands.
     -   Are there seasonal patterns?
+      - On average, the model performs better during winter when there are less overall demands.
 
 3.  **Demographic patterns:**
 
     -   Relate errors to census characteristics
     -   Are certain communities systematically harder to predict?
+      - Homogeneously white and high-income communities are systematically harder to predict, likely due to more irregular travel patterns and more tourism.
     -   What are the equity implications?
-
+      - This model works well in transit-rich, dense, and commute-driven neighborhoods, but not in areas with more fflexible and less predictable mobility behaviors.
+      
 # SPACE-TIME ERROR ANALYSIS
 
 ## Observed vs. Predicted
 
 Let's use our best model (Model 7) for error analysis.
 
-```{r obs_vs_pred}
+```{r obs_vs_pred3}
 #| message: false
 #| warning: false
 
@@ -1839,7 +1879,7 @@ ggplot(test3, aes(x = Trip_Count, y = pred7)) +
 
 Are prediction errors clustered in certain parts of Philadelphia?
 
-```{r spatial_errors}
+```{r spatial_errors3}
 # Calculate MAE by station
 station_errors3 <- test3 %>%
   group_by(start_station, start_lat, start_lon) %>%
@@ -1939,7 +1979,7 @@ p2 <- ggplot() +
 
 When are we most wrong?
 
-```{r temporal_errors}
+```{r temporal_errors3}
 # MAE by time of day and day type
 temporal_errors3 <- test3 %>%
   group_by(time_of_day, weekend) %>%
@@ -1962,6 +2002,46 @@ ggplot(temporal_errors3, aes(x = time_of_day, y = MAE, fill = day_type)) +
   plotTheme +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+
+## Errors and Demographics
+
+Are prediction errors related to neighborhood characteristics?
+
+```{r errors_demographics3}
+#| message: false
+#| warning: false
+
+# Join demographic data to station errors
+station_errors_demo3 <- station_errors3 %>%
+  left_join(
+    station_attributes3 %>% select(start_station, Med_Inc, Percent_Taking_Transit, Percent_White),
+    by = "start_station"
+  ) %>%
+  filter(!is.na(Med_Inc))
+
+# Create plots
+p1 <- ggplot(station_errors_demo3, aes(x = Med_Inc, y = MAE)) +
+  geom_point(alpha = 0.5, color = "#3182bd") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  scale_x_continuous(labels = scales::dollar) +
+  labs(title = "Errors vs. Median Income", x = "Median Income", y = "MAE") +
+  plotTheme
+
+p2 <- ggplot(station_errors_demo3, aes(x = Percent_Taking_Transit, y = MAE)) +
+  geom_point(alpha = 0.5, color = "#3182bd") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Errors vs. Transit Usage", x = "% Taking Transit", y = "MAE") +
+  plotTheme
+
+p3 <- ggplot(station_errors_demo3, aes(x = Percent_White, y = MAE)) +
+  geom_point(alpha = 0.5, color = "#3182bd") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Errors vs. Race", x = "% White", y = "MAE") +
+  plotTheme
+
+(p1 | p2) / (p3 | plot_spacer())
+```
+
 
 
 
@@ -2012,6 +2092,183 @@ Based on your error analysis, add 2-3 NEW features to improve the model:
 
 -   Does this improve model fit?
 
+## Add weather/temporal features
+```{r}
+# Create temperature indicator for 60-75 F, no rain
+train3 <- train3 %>%
+  mutate(
+    nice_weather = ifelse(
+      Temperature >= 60 & Temperature <= 75 & Precipitation == 0,
+      1, 0
+    )
+  )
+
+test3 <- test3 %>%
+  mutate(
+    nice_weather = ifelse(
+      Temperature >= 60 & Temperature <= 75 & Precipitation == 0,
+      1, 0
+    )
+  )
+# Create temporal features
+holiday_dates <- as.Date(c(
+  "2025-07-04",
+  "2025-09-01"
+))
+# Holiday spillover effect
+train3 <- train3 %>%
+  mutate(
+    is_holiday = ifelse(
+      date %in% holiday_dates |
+      date %in% (holiday_dates - 1) |
+      date %in% (holiday_dates + 1),
+      1, 0
+    )
+  )
+test3 <- test3 %>%
+  mutate(
+    is_holiday = ifelse(
+      date %in% holiday_dates |
+      date %in% (holiday_dates - 1) |
+      date %in% (holiday_dates + 1),
+      1, 0
+    )
+  )
+
+
+```
+
+## Build Models
+
+```{r model11}
+# Build model
+model11 <- lm(
+  Trip_Count ~ as.factor(hour) + dotw_simple + Temperature + Precipitation +
+    lag1Hour + lag3Hours + lag1day + rush_hour + as.factor(month) +
+    Med_Inc + Percent_Taking_Transit + Percent_White +
+    as.factor(start_station) +
+    rush_hour * weekend +
+    nice_weather * weekend, # Add weekend and nice weather interaction
+  data = train3
+)
+
+cat("Model 11 R-squared:", summary(model11)$r.squared, "\n")
+cat("Model 11 Adj R-squared:", summary(model11)$adj.r.squared, "\n")
+```
+
+
+```{r model12}
+# Build model
+model12 <- lm(
+  Trip_Count ~ as.factor(hour) + dotw_simple + Temperature + Precipitation +
+    lag1Hour + lag3Hours + lag1day + rush_hour + as.factor(month) +
+    Med_Inc + Percent_Taking_Transit + Percent_White +
+    as.factor(start_station) +
+    rush_hour * weekend +
+    nice_weather * weekend + # Add weekend and nice weather interaction
+    is_holiday,
+  data = train3
+)
+
+cat("Model 12 R-squared:", summary(model12)$r.squared, "\n")
+cat("Model 12 Adj R-squared:", summary(model12)$adj.r.squared, "\n")
+```
+
+## Build a Poisson Model
+```{r poisson}
+model_pois <- glm(
+  Trip_Count ~ as.factor(hour) + dotw_simple + Temperature + Precipitation +
+    lag1Hour + lag3Hours + lag1day + rush_hour + as.factor(month) +
+    Med_Inc + Percent_Taking_Transit + Percent_White +
+    as.factor(start_station) +
+    rush_hour * weekend +
+    nice_weather * weekend +
+    is_holiday,
+  data = train3,
+  family = "poisson"
+)
+
+# Predictions
+test3 <- test3 %>%
+  mutate(
+    pred_pois = predict(model_pois, newdata = test3, type = "response")
+  )
+
+# MAE
+mae_pois <- mean(abs(test3$Trip_Count - test3$pred_pois), na.rm = TRUE)
+
+cat("Poisson Model MAE:", mae_pois, "\n")
+
+# Overdispersion checks
+# Basic dispersion (data-level)
+vm_ratio <- var(train3$Trip_Count) / mean(train3$Trip_Count)
+
+# Model-based dispersion
+dispersion_ratio <- model_pois$deviance / model_pois$df.residual
+
+cat("=== Overdispersion Check ===\n")
+cat("Variance-to-Mean Ratio:", round(vm_ratio, 2), "\n")
+cat("Residual Deviance / DF:", round(dispersion_ratio, 2), "\n")
+
+if (vm_ratio < 1.5 & dispersion_ratio < 1.5) {
+  cat("Interpretation: No strong overdispersion. Poisson assumption reasonable.\n")
+} else if (vm_ratio < 5 & dispersion_ratio < 5) {
+  cat("Interpretation: Mild overdispersion. Poisson may still be usable.\n")
+} else {
+  cat("Interpretation: Strong overdispersion. Poisson assumptions likely violated.\n")
+}
+```
+
+## Model Comparison
+```{r compare}
+test3 <- test3 %>%
+  mutate(
+    pred6  = predict(model6, newdata = test3),
+    pred7  = predict(model7, newdata = test3),
+    pred8  = predict(model8, newdata = test3),
+    pred9  = predict(model9, newdata = test3),
+    pred10 = predict(model10, newdata = test3),
+    pred11 = predict(model11, newdata = test3),
+    pred_pois = predict(model_pois, newdata = test3, type = "response")
+  )
+
+mae_results_all <- data.frame(
+  Model = c(
+    "6. Time + Weather",
+    "7. + Temporal Lags",
+    "8. + Demographics",
+    "9. + Station FE",
+    "10. + Rush Hour Interaction",
+    "11. + Weather & Holiday Features",
+    "12. Poisson Model"
+  ),
+  MAE = c(
+    mean(abs(test3$Trip_Count - test3$pred6), na.rm = TRUE),
+    mean(abs(test3$Trip_Count - test3$pred7), na.rm = TRUE),
+    mean(abs(test3$Trip_Count - test3$pred8), na.rm = TRUE),
+    mean(abs(test3$Trip_Count - test3$pred9), na.rm = TRUE),
+    mean(abs(test3$Trip_Count - test3$pred10), na.rm = TRUE),
+    mean(abs(test3$Trip_Count - test3$pred11), na.rm = TRUE),
+    mean(abs(test3$Trip_Count - test3$pred_pois), na.rm = TRUE)
+  )
+)
+
+mae_results_all
+
+# Visualize
+ggplot(mae_results_all, aes(x = reorder(Model, -MAE), y = MAE)) +
+  geom_col(fill = "#3182bd", alpha = 0.8) +
+  geom_text(aes(label = round(MAE, 2)), vjust = -0.5) +
+  labs(
+    title = "Model Performance Comparison (Q3)",
+    subtitle = "Lower MAE = Better Predictions",
+    x = "",
+    y = "Mean Absolute Error (Trips)"
+  ) +
+  plotTheme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
 ## Part 4: Critical Reflection
 
 Write 1-2 paragraphs addressing:
@@ -2028,7 +2285,11 @@ Write 1-2 paragraphs addressing:
     -   What patterns is your model missing?
     -   What assumptions might not hold in real deployment?
     -   How would you improve this with more time/data?
-
+    **Critical Reflection**
+    - The Poisson model appears sufficiently accurate to provide operational guidance, particularly given its improved MAE relative to linear models. While it is not precise enough for exact station-level allocation, it performs well at capturing overall demand patterns and can support strategic rebalancing decisions, especially for routine weekday operations. However, prediction errors become most problematic during peak demand conditions (rush hours) and extreme low-demand periods, where underestimation can lead to empty stations and overestimation can result in inefficient redistribution. Therefore, this system should be deployed as a decision-support tool rather than a fully automated system, ideally supplemented with real-time monitoring and manual adjustments during high-variability periods.
+    - The error analysis suggests that prediction accuracy varies systematically across neighborhoods, with higher errors in wealthier, less transit-dependent, and predominantly white areas. This likely reflects more irregular and discretionary travel behavior rather than inherent bias, but it still raises equity concerns. If rebalancing decisions rely heavily on these predictions, the system could unintentionally prioritize already predictable, transit-rich areas while misallocating resources in others. To mitigate this, safeguards should include minimum service thresholds across all neighborhoods, periodic equity audits of bike availability, and the incorporation of additional features (e.g., land use, events, or demand variability) to better capture non-routine travel patterns.
+    - 
+Finally, the model has several limitations. It systematically smooths peak demand, failing to capture sudden spikes driven by events, weather shifts, or behavioral variability. It also relies on assumptions such as stable temporal patterns and consistent relationships between predictors and demand, that may not hold in real-world deployment. With more time and data, the model could be improved by incorporating event-based features, real-time data streams, and more flexible distributions (e.g., negative binomial models) to better handle overdispersion. Overall, while the model provides a strong baseline, its effectiveness depends on recognizing and compensating for its limitations in dynamic urban environments.
 ------------------------------------------------------------------------
 
 # Submission Requirements
