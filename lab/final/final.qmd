@@ -45,67 +45,75 @@ cat("✓ Working directory:", getwd(), "\n")
 
 ```
 
-```{r load data + visualization}
+```{r load data + clean}
 #| message: false
 #| warning: false
 
 # Load eviction data
-evict <- st_read("data/philadelphia_weekly_2020_2021.csv")
+evict_raw <- st_read("data/philadelphia_monthly_2020_2021.csv")
 
-glimpse(evict)
+glimpse(evict_raw)
 
 # Clean
-evict <- evict %>%
+evict_raw <- evict_raw %>%
   mutate(
-    week_date = mdy(week_date),
-    filings_2020 = as.numeric(filings_2020),
-    filings_avg = as.numeric(filings_avg),
-    filings_avg_prepandemic_baseline = as.numeric(filings_avg_prepandemic_baseline),
-    week = as.numeric(week)
+    month = as.character(month),
+    month_date = mdy(paste0("01/", month)),   # turn "01/2020" → "01/01/2020"
+    month_num = month(month_date),            # 1–12
+    year = year(month_date),                  # also useful
+    filings = as.numeric(filings_2020)
   )
 
-# Keep a copy of weekly data (important!)
-evict_weekly <- evict
+# Remove sealed
+evict_cleaned <- evict_raw %>%
+  filter(GEOID != "sealed")
 
-# Aggregate to quarterly
-evict_q <- evict %>%
-  mutate(
-    year = year(week_date),
-    quarter = quarter(week_date)
-  ) %>%
-  group_by(GEOID, year, quarter) %>%
+# Keep a copy of monthly data (important!)
+evict_monthly <- evict_cleaned
+
+# Aggregate to monthly
+evict_m <- evict_cleaned %>%
+  group_by(GEOID, month_date) %>%
   summarise(
-    filings = sum(filings_2020, na.rm = TRUE),
+    filings = sum(filings, na.rm = TRUE),
     .groups = "drop"
-  ) %>%
-  ungroup()
-
-# Check the data
-cat("\n✓ Loaded eviction data\n")
-cat("  - Number of evictions:", nrow(evict), "\n")
-cat("  - Date range:", format(min(evict$week_date, na.rm = TRUE)), "to", 
-    format(max(evict$week_date, na.rm = TRUE)), "\n")
-
-# Plot garbage cart service requests in Chicago
-ggplot() +
-  geom_sf(data = chicagoBoundary, fill = "grey90", color = "black", linewidth = 0.5) +
-  geom_sf(data = cart, color = "red", size = 0.5, alpha = 0.4) +
-  labs(
-    title = "311 Garbage Cart Service Requests",
-    subtitle = "Chicago, IL",
-    caption = "Source: Chicago Data Portal"
-  ) +
-  theme_void() +
-  theme(
-    plot.title = element_text(face = "bold", size = 14),
-    plot.subtitle = element_text(size = 11),
-    plot.caption = element_text(size = 8, color = "grey50")
   )
 
-cat("✓ Loaded spatial boundaries\n")
-cat("✓ Loaded Garbage cart service request\n")
-cat("✓ Loaded Police districts\n")
-cat("  - Garbage cart service request:", nrow(cart), "\n")
+# Complete dataset
+evict_m <- evict_m %>%
+  left_join(
+    evict_cleaned %>%
+      dplyr::select(GEOID, month_date, type, racial_majority, month_num, year) %>%
+      distinct(),
+    by = c("GEOID", "month_date")
+  )
+
+# Filter time
+evict <- evict_m %>%
+  filter(
+    month_date >= as.Date("2023-03-01") &
+    month_date <= as.Date("2026-03-31")
+  )
+
+# Summary
+summary_table <- tibble(
+  step = c(
+    "Original data",
+    "After removing 'sealed'",
+    "After time filter (2023-03 to 2026-03)"
+  ),
+  n_rows = c(
+    nrow(evict_raw),
+    nrow(evict_cleaned),
+    nrow(evict)
+  )
+)
+
+summary_table
+```
+
+```{r data exploration}
+
 
 ```
 
