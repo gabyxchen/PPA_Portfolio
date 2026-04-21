@@ -1,0 +1,128 @@
+---
+title: "CPLN 5920 Final Project"
+subtitle: "Iron Chef x Shark Tank x Kaggle"
+format: 
+  html:
+    toc: true
+    toc-location: left
+    code-fold: show
+    theme: cosmo
+---
+## Eviction Data Exploration
+
+```{r setup, include=FALSE}
+#| message: false
+#| warning: false
+
+# Load required packages
+library(tidyverse)      # Data manipulation
+library(sf)             # Spatial operations
+library(here)           # Relative file paths
+library(viridis)        # Color scales
+library(terra)          # Raster operations (replaces 'raster')
+library(spdep)          # Spatial dependence
+library(FNN)            # Fast nearest neighbors
+library(MASS)           # Negative binomial regression
+library(patchwork)      # Plot composition (replaces grid/gridExtra)
+library(knitr)          # Tables
+library(kableExtra)     # Table formatting
+library(classInt)       # Classification intervals
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+
+
+# Spatstat for analyzing point patterns - split into sub-packages
+library(spatstat.geom)    # Spatial geometries
+library(spatstat.explore) # Spatial exploration/KDE
+
+# Set options
+options(scipen = 999)  # No scientific notation
+set.seed(5080)         # Reproducibility, could be any number
+
+cat("✓ All packages loaded successfully!\n")
+cat("✓ Working directory:", getwd(), "\n")
+
+```
+
+```{r load data + visualization}
+#| message: false
+#| warning: false
+
+# Load eviction data
+evict <- st_read("data/philadelphia_weekly_2020_2021.csv")
+
+glimpse(evict)
+
+# Clean
+evict <- evict %>%
+  mutate(
+    week_date = mdy(week_date),
+    filings_2020 = as.numeric(filings_2020),
+    filings_avg = as.numeric(filings_avg),
+    filings_avg_prepandemic_baseline = as.numeric(filings_avg_prepandemic_baseline),
+    week = as.numeric(week)
+  )
+
+# Keep a copy of weekly data (important!)
+evict_weekly <- evict
+
+# Aggregate to quarterly
+evict_q <- evict %>%
+  mutate(
+    year = year(week_date),
+    quarter = quarter(week_date)
+  ) %>%
+  group_by(GEOID, year, quarter) %>%
+  summarise(
+    filings = sum(filings_2020, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  ungroup()
+
+# Check the data
+cat("\n✓ Loaded eviction data\n")
+cat("  - Number of evictions:", nrow(evict), "\n")
+cat("  - Date range:", format(min(evict$week_date, na.rm = TRUE)), "to", 
+    format(max(evict$week_date, na.rm = TRUE)), "\n")
+
+# Plot garbage cart service requests in Chicago
+ggplot() +
+  geom_sf(data = chicagoBoundary, fill = "grey90", color = "black", linewidth = 0.5) +
+  geom_sf(data = cart, color = "red", size = 0.5, alpha = 0.4) +
+  labs(
+    title = "311 Garbage Cart Service Requests",
+    subtitle = "Chicago, IL",
+    caption = "Source: Chicago Data Portal"
+  ) +
+  theme_void() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 11),
+    plot.caption = element_text(size = 8, color = "grey50")
+  )
+
+cat("✓ Loaded spatial boundaries\n")
+cat("✓ Loaded Garbage cart service request\n")
+cat("✓ Loaded Police districts\n")
+cat("  - Garbage cart service request:", nrow(cart), "\n")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
