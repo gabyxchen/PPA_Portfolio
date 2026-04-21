@@ -270,7 +270,7 @@ We'll get census tract data to add demographic context to our stations.
 #| warning: false
 #| echo: false
 
-census_file <- "data/philly_census.csv"
+census_file <- "data/philly_census.rds"
 
 if (!file.exists(census_file)) {
   
