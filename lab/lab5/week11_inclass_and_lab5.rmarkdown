@@ -271,37 +271,47 @@ We'll get census tract data to add demographic context to our stations.
 #| echo: false
 
 
-# Get Philadelphia census tracts
-philly_census <- get_acs(
-  geography = "tract",
-  variables = c(
-    "B01003_001",  # Total population
-    "B19013_001",  # Median household income
-    "B08301_001",  # Total commuters
-    "B08301_010",  # Commute by transit
-    "B02001_002",  # White alone
-    "B25077_001"   # Median home value
-  ),
-  state = "PA",
-  county = "Philadelphia",
-  year = 2022,
-  geometry = TRUE,
-  output = "wide"
-) %>%
-  rename(
-    Total_Pop = B01003_001E,
-    Med_Inc = B19013_001E,
-    Total_Commuters = B08301_001E,
-    Transit_Commuters = B08301_010E,
-    White_Pop = B02001_002E,
-    Med_Home_Value = B25077_001E
-  ) %>%
-  mutate(
-    Percent_Taking_Transit = (Transit_Commuters / Total_Commuters) * 100,
-    Percent_White = (White_Pop / Total_Pop) * 100
-  ) %>%
-  st_transform(crs = 4326)  #transforming to WGS84 for lat/lon matching, currently in NAD83
+census_file <- "data/philly_census.csv"
 
+if (!file.exists(census_file)) {
+  
+  philly_census <- get_acs(
+    geography = "tract",
+    variables = c(
+      "B01003_001",
+      "B19013_001",
+      "B08301_001",
+      "B08301_010",
+      "B02001_002",
+      "B25077_001"
+    ),
+    state = "PA",
+    county = "Philadelphia",
+    year = 2022,
+    geometry = TRUE,
+    output = "wide"
+  ) %>%
+    rename(
+      Total_Pop = B01003_001E,
+      Med_Inc = B19013_001E,
+      Total_Commuters = B08301_001E,
+      Transit_Commuters = B08301_010E,
+      White_Pop = B02001_002E,
+      Med_Home_Value = B25077_001E
+    ) %>%
+    mutate(
+      Percent_Taking_Transit = (Transit_Commuters / Total_Commuters) * 100,
+      Percent_White = (White_Pop / Total_Pop) * 100
+    ) %>%
+    st_transform(crs = 4326)
+  
+  # Save (IMPORTANT)
+  saveRDS(philly_census, "data/philly_census.rds")
+
+} else {
+  
+  philly_census <- readRDS("data/philly_census.rds")
+}
 # Check the data
 glimpse(philly_census)
 ```
@@ -442,7 +452,7 @@ Weather significantly affects bike share demand! Let's get hourly weather for Ph
 # This covers Q1 2025: January 1 - March 31
 weather_file <- "data/weather_q1.csv"
 
-if (!file.exists(weather_file3)) {
+if (!file.exists(weather_file)) {
   
   # Pull once
   weather_data <- riem_measures(
