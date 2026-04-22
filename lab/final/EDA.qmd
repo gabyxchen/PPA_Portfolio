@@ -1,0 +1,32 @@
+---
+title: "CPLN 5920 Final Project: EDA"
+format: html
+editor: visual
+---
+
+## Start with the outcome variable (filings)
+1. How skewed is it?
+2. How many zeros?
+3. Overdispersion?
+
+```{r setup}
+
+
+```
+
+```{r load data set}
+evict <- 
+
+```
+
+---
+## Distribution
+
+
+
+---
+## Time Trends
+1. Upward/downward trends
+2. Seasonal patterns
+
+---
