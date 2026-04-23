@@ -9,24 +9,235 @@ editor: visual
 2. How many zeros?
 3. Overdispersion?
 
-```{r setup}
+```{r setup, include=FALSE}
+#| message: false
+#| warning: false
 
+# Load required packages
+library(tidyverse)      # Data manipulation
+library(sf)             # Spatial operations
+library(here)           # Relative file paths
+library(viridis)        # Color scales
+library(terra)          # Raster operations (replaces 'raster')
+library(spdep)          # Spatial dependence
+library(FNN)            # Fast nearest neighbors
+library(MASS)           # Negative binomial regression
+library(patchwork)      # Plot composition (replaces grid/gridExtra)
+library(knitr)          # Tables
+library(kableExtra)     # Table formatting
+library(classInt)       # Classification intervals
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(tidycensus)
+
+
+# Spatstat for analyzing point patterns - split into sub-packages
+library(spatstat.geom)    # Spatial geometries
+library(spatstat.explore) # Spatial exploration/KDE
+
+# Set options
+options(scipen = 999)  # No scientific notation
+set.seed(5080)         # Reproducibility, could be any number
+
+cat("✓ All packages loaded successfully!\n")
+cat("✓ Working directory:", getwd(), "\n")
 
 ```
 
 ```{r load data set}
-evict <- 
+evict <- read_csv("data/eviction.csv")
+
+glimpse(evict)
+
+evict <- evict %>%
+  mutate(
+    GEOID = as.character(GEOID),
+    month_date = my(month),   # "03/2023" → 2023-03-01
+    year = year(month_date),
+    month_num = month(month_date)
+  ) %>%
+  dplyr::select(-last_updated)
 
 ```
 
 ---
 ## Distribution
 
+```{r}
+ggplot(evict, aes(x = filings_2020)) +
+  geom_histogram(bins = 50)
 
+```
+Eviction filings are highly skewed and there are a lot of zeros.
 
 ---
 ## Time Trends
 1. Upward/downward trends
 2. Seasonal patterns
 
+```{r}
+evict %>%
+  group_by(month_date) %>%
+  summarise(avg_filings = mean(filings_2020, na.rm = TRUE)) %>%
+  ggplot(aes(x = month_date, y = avg_filings)) +
+  geom_line()
+
+```
+There is no strong long-term trend in the filing data and very high month-to-month volatility.
 ---
+## Spatial Inequality
+1. Top & bottom tracts
+2. top 10 tracts by absolute filing numbers and concentration
+
+```{r}
+evict %>%
+  group_by(GEOID) %>%
+  summarise(avg_filings = mean(filings_2020, na.rm = TRUE)) %>%
+  ggplot(aes(x = avg_filings)) +
+  geom_histogram(bins = 50)
+
+```
+
+```{r}
+top10 <- evict %>%
+  group_by(GEOID) %>%
+  summarise(total = sum(filings_2020, na.rm = TRUE)) %>%
+  arrange(desc(total)) %>%
+  head(10) # Top 10 census tracts with the most filings
+
+top10
+
+# Pull renter households data
+renters <- get_acs(
+  geography = "tract",
+  variables = "B25003_003",
+  state = "PA",
+  county = "Philadelphia",
+  year = 2023,
+  geometry = FALSE
+)
+
+renters <- renters %>%
+  dplyr::select(GEOID, renters = estimate)
+
+# Join to dataset
+evict <- evict %>%
+  left_join(renters, by = "GEOID")
+
+# Normaliza filings
+evict <- evict %>%
+  mutate(
+    filings_per_1k_renters = (filings_2020 / renters) * 1000
+  )
+
+# Compute tract-level average rate
+evict_clean_rate <- evict %>%
+  filter(!is.na(renters) & renters > 0)
+
+evict_clean_rate <- evict_clean_rate %>%
+  filter(renters > 100)   # adjust threshold
+
+top10_rate <- evict_clean_rate %>%
+  group_by(GEOID) %>%
+  summarise(
+    avg_rate = mean(filings_per_1k_renters, na.rm = TRUE),
+    total_filings = sum(filings_2020, na.rm = TRUE),
+    renters = first(renters),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(avg_rate)) %>%
+  slice(1:10)
+
+top10_rate
+
+# Find common tracts as policy hotspots
+hotspot <- intersect(top10$GEOID, top10_rate$GEOID)
+hotspot
+
+```
+
+There are a few tracts that have very high filing records. By finding the top 10 census tracts with highest filing records and top 10 census tracts with highest filing record concentration, we identify two high risk census tracts that appear in both lists as rental assistance policy hotspots.
+---
+## Dynamics
+1. Create multiple lag variables (1 month lag, 1 quarter lag)
+2. Visualize Changes
+
+```{r}
+evict <- evict %>%
+  arrange(GEOID, month_date) %>%
+  group_by(GEOID)
+
+# 1 month lag
+evict <- evict %>%
+  mutate(
+    lag_1m = lag(filings_2020, 1)
+  )
+
+# Quarter lag
+evict <- evict %>%
+  mutate(
+    lag_3m = lag(filings_2020, 3)
+  )
+
+# Create change variables
+evict <- evict %>%
+  mutate(
+    change_1m = filings_2020 - lag_1m,
+    change_3m = filings_2020 - lag_3m
+  )
+
+# Visualize 1 month change
+ggplot(evict, aes(x = change_1m)) +
+  geom_histogram(bins = 50) +
+  labs(title = "Monthly Change in Filings")
+
+# Visualize quarterly change
+ggplot(evict, aes(x = change_3m)) +
+  geom_histogram(bins = 50) +
+  labs(title = "Quarterly Change in Filings")
+
+```
+Both monthly and quarterly change have symmetrical distribution. Eviction filings are not consistently increasing or decreasing. Changes in eviction activity fluctuate around a stable baseline rather than showing persistent growth or decline. This suggests that recent lag components of filings are strong predictors for future risks.
+
+---
+## Race/Demographic Patterns
+
+```{r}
+evict %>%
+  group_by(racial_majority) %>%
+  summarise(avg_filings = mean(filings_2020, na.rm = TRUE))
+
+```
+Black-majority neighborhoods have substantially higher average eviction filings. Even after adjusting for renter population, eviction activity remains higher in Black-majority neighborhoods, suggesting structural disparities in housing stability.
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
