@@ -1,0 +1,973 @@
+---
+title: "Philadelphia Eviction Model - Technical Appendix"
+author: "Daisy, Gab, Johnny, Yiting"
+date: "April 28, 2026"
+format: 
+  html:
+    code-fold: show
+    toc: true
+    toc-location: left
+    theme: cosmo
+editor: 
+  markdown: 
+    wrap: sentence
+---
+
+# 1 SET UP
+
+```{r setup, include=FALSE}
+#| message: false
+#| warning: false
+
+# Load required packages
+library(tidyverse)      # Data manipulation
+library(sf)             # Spatial operations
+library(here)           # Relative file paths
+library(terra)          # Raster operations (replaces 'raster')
+library(spdep)          # Spatial dependence
+library(FNN)            # Fast nearest neighbors
+library(MASS)           # Negative binomial regression
+library(patchwork)      # Plot composition (replaces grid/gridExtra)
+library(knitr)          # Tables
+library(kableExtra)     # Table formatting
+library(classInt)       # Classification intervals
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(tidycensus)
+library(spatstat.geom)
+library(spatstat.explore)
+library(tensor)
+# Set options
+options(scipen = 999)
+set.seed(5080)
+Sys.setlocale("LC_TIME", "English")
+
+cat("[OK] All packages loaded successfully!\n")
+cat("[OK] Working directory:", getwd(), "\n")
+
+```
+
+# 2 Data Cleaning
+
+## 2.1 Eviction Filing Records
+
+```{r}
+# load data (https://evictionlab.org/eviction-tracking/get-the-data/)
+eviction_0 <- read.csv(here("data/philadelphia_monthly_2020_2021.csv"))
+glimpse(eviction_0)
+
+## trends of month
+monthly_total <- eviction_0 %>%
+  mutate(date = my(month)) %>%
+  group_by(date) %>%
+  summarise(total_filings = sum(filings_2020, na.rm = TRUE)) %>%
+  arrange(date)
+
+ggplot(monthly_total, aes(x = date, y = total_filings)) +
+  geom_line(color = "#2c7bb6", linewidth = 1) +
+  geom_point(color = "#2c7bb6", size = 2.5) +
+  geom_smooth(method = "loess", se = TRUE, 
+              color = "#d7191c", linetype = "dashed", alpha = 0.15) +
+  geom_text(data = monthly_total %>% slice_max(total_filings, n = 1),
+            aes(label = paste0(format(date, "%b %Y"), "\n", total_filings)),
+            vjust = -1, size = 3.5, color = "#d7191c") +
+  
+  scale_x_date(date_breaks = "2 months", date_labels = "%b\n%Y") +
+  labs(
+    title = "Monthly Eviction Filings (after 2020)",
+    x = NULL, y = "Total Filings"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+**Analysis:** The raw eviction filing data show large pandemic-related fluctuations before 2023, reflecting the disruption caused by COVID-era eviction moratoria, emergency rental assistance, and other temporary housing policies. After March 2023, filings return to a more stable pattern with clearer temporal variation. For this reason, we restrict the analysis to March 2023 through March 2026, so the model is trained on a period with more comparable housing market conditions and more consistent filing policy.
+
+```{r}
+# filter data
+results <- list()
+
+## Step 1: original
+results[["0_original"]] <- nrow(eviction_0)
+
+## Step 2: date filter
+eviction_step1 <- eviction_0 %>%
+  filter(between(my(month), my("03/2023"), my("03/2026")))
+results[["1_2023Mar_2026Mar"]] <- nrow(eviction_step1)
+
+## Step 3: GEOID != "sealed"
+eviction_step2 <- eviction_step1 %>%
+  filter(GEOID != "sealed")
+results[["2_geoid_not_sealed"]] <- nrow(eviction_step2)
+
+## Step 4: remove tracts where total filings = 0
+evict <- eviction_step2 %>%
+  group_by(GEOID) %>%
+  filter(sum(filings_2020, na.rm = TRUE) != 0) %>%
+  ungroup()
+results[["3_tract_total_not_0"]] <- nrow(evict)
+
+## Summary table
+tibble(
+  step = names(results),
+  remaining = unlist(results)
+) %>%
+  mutate(removed = lag(remaining, default = first(remaining)) - remaining)
+
+```
+
+```{r load data set}
+glimpse(evict)
+
+evict <- evict %>%
+  mutate(
+    GEOID = as.character(GEOID),
+    month_date = my(month),
+    year = year(month_date),
+    month_num = month(month_date)
+  ) %>%
+  dplyr::select(-last_updated)
+
+```
+
+## 2.2 Census and Housing Variables
+
+```{r}
+# Pull renter households and housing cost variables
+acs_housing <- get_acs(
+  geography = "tract",
+  variables = c(
+    renters = "B25003_003",
+    median_gross_rent = "B25064_001",
+    median_household_income = "B19013_001",
+    renter_hh_total = "B25070_001",
+    rent_30_34 = "B25070_007",
+    rent_35_39 = "B25070_008",
+    rent_40_49 = "B25070_009",
+    rent_50_plus = "B25070_010",
+    rent_not_computed = "B25070_011"
+  ),
+  state = "PA",
+  county = "Philadelphia",
+  year = 2023,
+  geometry = FALSE
+)
+
+renters <- acs_housing %>%
+  dplyr::select(GEOID, variable, estimate) %>%
+  pivot_wider(names_from = variable, values_from = estimate) %>%
+  mutate(
+    renter_hh_computed = renter_hh_total - rent_not_computed,
+    rent_burden_pct = if_else(
+      renter_hh_computed > 0,
+      ((rent_30_34 + rent_35_39 + rent_40_49 + rent_50_plus) / renter_hh_computed) * 100,
+      NA_real_
+    )
+  ) %>%
+  dplyr::select(
+    GEOID,
+    renters,
+    median_gross_rent,
+    median_household_income,
+    rent_burden_pct
+  )
+
+# Join to dataset
+evict <- evict %>%
+  left_join(renters, by = "GEOID")
+
+# Normaliza filings
+evict <- evict %>%
+  mutate(
+    filings_per_1k_renters = (filings_2020 / renters) * 1000
+  )
+
+# Compute tract-level average rate
+evict_clean_rate <- evict %>%
+  filter(!is.na(renters) & renters > 0)
+
+evict_clean_rate <- evict_clean_rate %>%
+  filter(renters > 100)   # adjust threshold
+
+```
+
+
+
+# 3 EDA
+
+## 3.1 Filing Distribution
+
+```{r}
+ggplot(evict, aes(x = filings_2020)) +
+  geom_histogram(bins = 50, fill = "#1f4e79", color = "white", linewidth = 0.2)
+
+```
+
+**Summary:** Eviction filings are highly skewed and there are a lot of zeros.
+
+## 3.2 Filing Temporal Pattern
+
+```{r}
+evict %>%
+  group_by(month_date) %>%
+  summarise(avg_filings = mean(filings_2020, na.rm = TRUE)) %>%
+  ggplot(aes(x = month_date, y = avg_filings)) +
+  geom_line()
+
+```
+
+**Summary:** There is no strong long-term trend in the filing data and very high month-to-month volatility.
+
+## 3.3 Filing Spatial Pattern
+
+```{r}
+evict %>%
+  group_by(GEOID) %>%
+  summarise(avg_filings = mean(filings_2020, na.rm = TRUE)) %>%
+  ggplot(aes(x = avg_filings)) +
+  geom_histogram(bins = 50, fill = "#1f4e79", color = "white", linewidth = 0.2)
+
+```
+
+```{r}
+top10 <- evict %>%
+  group_by(GEOID) %>%
+  summarise(total = sum(filings_2020, na.rm = TRUE)) %>%
+  arrange(desc(total)) %>%
+  head(10) # Top 10 census tracts with the most filings
+
+top10
+
+top10_rate <- evict_clean_rate %>%
+  group_by(GEOID) %>%
+  summarise(
+    avg_rate = mean(filings_per_1k_renters, na.rm = TRUE),
+    total_filings = sum(filings_2020, na.rm = TRUE),
+    renters = first(renters),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(avg_rate)) %>%
+  slice(1:10)
+
+top10_rate
+
+# Find common tracts as policy hotspots
+hotspot <- intersect(top10$GEOID, top10_rate$GEOID)
+hotspot
+
+```
+
+```{r spatial-pattern-maps, results='hide'}
+# Build tract-level averages
+tract_summary <- evict %>%
+  filter(!is.na(GEOID)) %>%
+  group_by(GEOID) %>%
+  summarise(
+    avg_filings = mean(filings_2020, na.rm = TRUE),
+    avg_rate_1k = mean(filings_per_1k_renters, na.rm = TRUE),
+    total_filings = sum(filings_2020, na.rm = TRUE),
+    renters = first(renters),
+    .groups = "drop"
+  ) %>%
+  filter(!is.na(avg_filings), !is.na(avg_rate_1k))
+
+# Download Philadelphia tract geometry
+phl_tracts <- get_acs(
+  geography = "tract",
+  variables = "B01003_001",
+  state = "PA",
+  county = "Philadelphia",
+  year = 2023,
+  geometry = TRUE
+) %>%
+  dplyr::select(GEOID, geometry)
+```
+
+```{r}
+# Join summary data to tract geometry
+tract_map <- phl_tracts %>%
+  left_join(tract_summary, by = "GEOID")
+
+# Shared orange color palette
+orange_low  <- "#fff5eb"
+orange_mid  <- "#fdbb84"
+orange_high <- "#d94801"
+
+# Map 1: Average filings per tract
+map_avg_filings <- ggplot(tract_map) +
+  geom_sf(aes(fill = avg_filings), color = NA) +
+  scale_fill_gradientn(
+    colours = c(orange_low, orange_mid, orange_high),
+    name = "Avg.\nfilings",
+    na.value = "grey90"
+  ) +
+  labs(title = "Average Eviction Filings per Tract") +
+  theme_void() +
+  theme(
+    plot.title = element_text(size = 11, face = "bold"),
+    legend.title = element_text(size = 9),
+    legend.text = element_text(size = 8)
+  )
+
+# Map 2: Filings per 1,000 renters
+map_rate <- ggplot(tract_map) +
+  geom_sf(aes(fill = avg_rate_1k), color = NA) +
+  scale_fill_gradientn(
+    colours = c(orange_low, orange_mid, orange_high),
+    name = "Filings per\n1,000 renters",
+    na.value = "grey90"
+  ) +
+  labs(title = "Eviction Filings per 1,000 Renters") +
+  theme_void() +
+  theme(
+    plot.title = element_text(size = 11, face = "bold"),
+    legend.title = element_text(size = 9),
+    legend.text = element_text(size = 8)
+  )
+
+# Combine maps side by side
+map_avg_filings + map_rate +
+  plot_annotation(
+    title = "Spatial Patterns of Eviction Burden and Renter-Adjusted Risk",
+    theme = theme(
+      plot.title = element_text(size = 13, face = "bold", hjust = 0.5)
+    )
+  )
+```
+
+**Summary:** There are a few tracts that have very high filing records. By finding the top 10 census tracts with highest filing records and top 10 census tracts with highest filing record concentration, we identify two high risk census tracts that appear in both lists as rental assistance policy hotspots.
+
+## 3.4 Filing Dynamics
+
+```{r}
+evict <- evict %>%
+  arrange(GEOID, month_date) %>%
+  group_by(GEOID)
+
+# 1 month lag
+evict <- evict %>%
+  mutate(
+    lag_1m = lag(filings_2020, 1)
+  )
+
+# Quarter lag
+evict <- evict %>%
+  mutate(
+    lag_3m = lag(filings_2020, 3)
+  )
+
+# Create change variables
+evict <- evict %>%
+  mutate(
+    change_1m = filings_2020 - lag_1m,
+    change_3m = filings_2020 - lag_3m
+  )
+
+# Visualize 1 month change
+ggplot(evict, aes(x = change_1m)) +
+  geom_histogram(bins = 50, fill = "#1f4e79", color = "white", linewidth = 0.2) +
+  labs(title = "Monthly Change in Filings")
+
+# Visualize quarterly change
+ggplot(evict, aes(x = change_3m)) +
+  geom_histogram(bins = 50, fill = "#1f4e79", color = "white", linewidth = 0.2) +
+  labs(title = "Quarterly Change in Filings")
+
+```
+
+**Summary:** Both monthly and quarterly change have symmetrical distribution. Eviction filings are not consistently increasing or decreasing. Changes in eviction activity fluctuate around a stable baseline rather than showing persistent growth or decline. This suggests that recent lag components of filings are strong predictors for future risks.
+
+## 3.5 Racial Pattern
+
+```{r}
+evict %>%
+  group_by(racial_majority) %>%
+  summarise(avg_filings = mean(filings_2020, na.rm = TRUE))
+
+```
+
+**Summary:** Black-majority neighborhoods have substantially higher average eviction filings. Even after adjusting for renter population, eviction activity remains higher in Black-majority neighborhoods, suggesting structural disparities in housing stability.
+
+# 4 Modeling
+
+## 4.1 Prediction Target
+
+**Analysis:** The prediction task is to forecast census-tract-level eviction filings at monthly and quarterly time scales. We evaluate both count prediction and high-risk tract classification so the model can support short-term rental assistance targeting while still checking whether it identifies the highest-risk places.
+
+```{r modeling-helpers}
+library(broom)
+
+score_model <- function(actual, predicted) {
+  tibble(
+    MAE = mean(abs(actual - predicted), na.rm = TRUE),
+    RMSE = sqrt(mean((actual - predicted)^2, na.rm = TRUE)),
+    Correlation = cor(actual, predicted, use = "complete.obs")
+  )
+}
+
+classification_scores <- function(data, truth, pred) {
+  tp <- sum(data[[truth]] == 1 & data[[pred]] == 1, na.rm = TRUE)
+  fp <- sum(data[[truth]] == 0 & data[[pred]] == 1, na.rm = TRUE)
+  fn <- sum(data[[truth]] == 1 & data[[pred]] == 0, na.rm = TRUE)
+  tn <- sum(data[[truth]] == 0 & data[[pred]] == 0, na.rm = TRUE)
+
+  tibble(
+    Accuracy = (tp + tn) / (tp + tn + fp + fn),
+    Precision = ifelse(tp + fp == 0, NA, tp / (tp + fp)),
+    Recall = ifelse(tp + fn == 0, NA, tp / (tp + fn)),
+    F1 = ifelse(
+      (tp + fp) == 0 | (tp + fn) == 0,
+      NA_real_,
+      2 * ((tp / (tp + fp)) * (tp / (tp + fn))) / ((tp / (tp + fp)) + (tp / (tp + fn)))
+    )
+  )
+}
+
+evaluate_models <- function(data, split_name, model_specs, baseline_var) {
+  bind_rows(lapply(names(model_specs), function(model_name) {
+    spec <- model_specs[[model_name]]
+
+    predicted <- if (!is.null(spec$type) && spec$type == "baseline") {
+      pmax(data[[baseline_var]], 0)
+    } else {
+      predict(spec$model, newdata = data, type = "response")
+    }
+
+    predicted <- pmax(predicted, 0)
+
+    score_model(data$filings_next, predicted) %>%
+      mutate(model = model_name, split = split_name)
+  }))
+}
+
+```
+
+## 4.2 Monthly Models
+
+```{r create-monthly-model-data}
+monthly_model_data <- evict %>%
+  ungroup() %>%
+  arrange(GEOID, month_date) %>%
+  group_by(GEOID) %>%
+  mutate(
+    filings_next = lead(filings_2020, 1),
+    filings_next_per_1k_renters = lead(filings_per_1k_renters, 1),
+    lag_2m = lag(filings_2020, 2),
+    lag_12m = lag(filings_2020, 12),
+    rolling_mean_3m = (lag_1m + lag_2m + lag_3m) / 3
+  ) %>%
+  ungroup() %>%
+  mutate(
+    racial_majority = factor(racial_majority),
+    month_factor = factor(month_num, levels = 1:12, labels = month.abb)
+  ) %>%
+  filter(
+    !is.na(filings_next),
+    !is.na(lag_1m),
+    !is.na(lag_2m),
+    !is.na(lag_3m),
+    !is.na(lag_12m),
+    !is.na(renters),
+    !is.na(median_gross_rent),
+    !is.na(median_household_income),
+    !is.na(rent_burden_pct),
+    renters > 0
+  )
+
+monthly_split_lookup <- tibble(
+  month_date = sort(unique(monthly_model_data$month_date))
+) %>%
+  mutate(
+    data_split = case_when(
+      month_date <= ymd("2025-02-01") ~ "Train",
+      month_date <= ymd("2025-08-01") ~ "Validation",
+      TRUE ~ "Test"
+    )
+  )
+
+monthly_model_data <- monthly_model_data %>%
+  left_join(monthly_split_lookup, by = "month_date")
+
+monthly_train <- monthly_model_data %>% filter(data_split == "Train")
+monthly_validation <- monthly_model_data %>% filter(data_split == "Validation")
+monthly_test <- monthly_model_data %>% filter(data_split == "Test")
+```
+
+```{r fit-monthly-models}
+monthly_model_1 <- MASS::glm.nb(
+  filings_next ~ lag_1m + offset(log(renters)),
+  data = monthly_train
+)
+
+monthly_model_2 <- MASS::glm.nb(
+  filings_next ~ lag_1m + lag_3m + change_1m + rolling_mean_3m + offset(log(renters)),
+  data = monthly_train
+)
+
+monthly_model_3 <- MASS::glm.nb(
+  filings_next ~ lag_1m + lag_3m + change_1m + rolling_mean_3m +
+    filings_avg + filings_avg_prepandemic_baseline +
+    offset(log(renters)),
+  data = monthly_train
+)
+
+monthly_model_4 <- MASS::glm.nb(
+  filings_next ~ lag_1m + lag_3m + change_1m + rolling_mean_3m +
+    filings_avg + filings_avg_prepandemic_baseline +
+    racial_majority + month_factor +
+    offset(log(renters)),
+  data = monthly_train
+)
+
+monthly_model_5 <- MASS::glm.nb(
+  filings_next ~ lag_1m + lag_3m + change_1m + rolling_mean_3m +
+    filings_avg + filings_avg_prepandemic_baseline +
+    racial_majority + month_factor +
+    median_gross_rent + median_household_income + rent_burden_pct +
+    offset(log(renters)),
+  data = monthly_train
+)
+
+monthly_enhanced_baseline <- lm(
+  filings_next ~ lag_1m + lag_12m,
+  data = monthly_train
+)
+
+monthly_rolling_baseline <- lm(
+  filings_next ~ lag_1m + lag_12m + rolling_mean_3m,
+  data = monthly_train
+)
+
+monthly_model_specs <- list(
+  "Model 0: Baseline" = list(type = "baseline"),
+  "Model 0b: + lag_12m baseline" = list(model = monthly_enhanced_baseline),
+  "Model 0c: + rolling_mean_3m baseline" = list(model = monthly_rolling_baseline),
+  "Model 1: lag_1m" = list(model = monthly_model_1),
+  "Model 2: + dynamic terms" = list(model = monthly_model_2),
+  "Model 3: + historical baselines" = list(model = monthly_model_3),
+  "Model 4: + race and seasonality" = list(model = monthly_model_4),
+  "Model 5: + rent and income" = list(model = monthly_model_5)
+)
+```
+
+```{r compare-monthly-models}
+monthly_scores <- bind_rows(
+  evaluate_models(monthly_validation, "Validation", monthly_model_specs, "lag_1m"),
+  evaluate_models(monthly_test, "Test", monthly_model_specs, "lag_1m")
+) %>%
+  mutate(scale = "Monthly")
+
+monthly_scores %>%
+  mutate(across(c(MAE, RMSE, Correlation), round, 3)) %>%
+  dplyr::select(scale, split, model, MAE, RMSE, Correlation) %>%
+  kable(caption = "Monthly Forecast Performance as Variables Are Added Step by Step") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+**Summary:** We first evaluate monthly forecasting performance using held-out validation and test data. MAE and RMSE capture the size of prediction error, while correlation indicates whether the models preserve the relative ranking of tracts by future eviction risk. Across the monthly models, the enhanced baseline performs best out-of-sample, suggesting that recent filing history and short-term persistence contain more predictive information than the addition of broader structural covariates alone.
+
+```{r monthly-actual-vs-predicted, fig.width=7, fig.height=5}
+monthly_test_plot_data <- monthly_test %>%
+  mutate(
+    pred_best = predict(monthly_rolling_baseline, newdata = monthly_test)
+  ) %>%
+  mutate(
+    pred_best = pmax(pred_best, 0)
+  )
+
+ggplot(monthly_test_plot_data, aes(x = filings_next, y = pred_best)) +
+  geom_point(alpha = 0.35) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(
+    title = "Monthly Test Set: Actual vs Predicted Filings",
+    subtitle = "Best-performing monthly forecasting model (enhanced baseline with rolling mean)",
+    x = "Actual next-month filings",
+    y = "Predicted next-month filings"
+  ) +
+  theme_minimal()
+```
+
+**Summary:** The monthly actual-versus-predicted plot shows that the preferred monthly forecasting model captures the general tract-level pattern reasonably well, although predicted values appear to compress the upper tail. This suggests that the model is better at tracking moderate variation than at fully capturing the highest-filing tracts.
+
+```{r monthly-coefficients}
+tidy(monthly_model_5, conf.int = TRUE, exponentiate = TRUE) %>%
+  filter(term != "(Intercept)") %>%
+  dplyr::select(term, estimate, conf.low, conf.high, p.value) %>%
+  arrange(desc(estimate)) %>%
+  mutate(across(c(estimate, conf.low, conf.high, p.value), round, 3)) %>%
+  head(15) %>%
+  kable(
+    caption = "Monthly Negative Binomial Model Coefficients (Incidence Rate Ratios)",
+    col.names = c("Term", "IRR", "Lower CI", "Upper CI", "p-value")
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+```{r monthly-high-risk}
+monthly_risk_threshold <- quantile(
+  monthly_train$filings_next_per_1k_renters,
+  probs = 0.90,
+  na.rm = TRUE
+)
+
+monthly_test_predictions <- monthly_test %>%
+  mutate(
+    pred_next = predict(monthly_model_5, newdata = monthly_test, type = "response"),
+    pred_next_per_1k_renters = (pred_next / renters) * 1000,
+    high_risk_true = if_else(filings_next_per_1k_renters >= monthly_risk_threshold, 1, 0),
+    high_risk_pred = if_else(pred_next_per_1k_renters >= monthly_risk_threshold, 1, 0)
+  )
+
+monthly_risk_scores <- classification_scores(monthly_test_predictions, "high_risk_true", "high_risk_pred")
+
+monthly_risk_scores %>%
+  mutate(across(everything(), round, 3)) %>%
+  kable(caption = "Monthly High-Risk Classification Performance on Test Data") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+**Summary:** Because the policy goal is not only to predict filing counts but also to identify neighborhoods most in need of preventive intervention, we also evaluate how well the models classify high-risk tracts. Precision indicates whether flagged tracts are truly high risk, while recall measures how many of the truly high-risk tracts are successfully identified.
+
+Taken together, these results suggest that the monthly model is useful as a screening tool for identifying elevated-risk tracts, although it should support rather than replace policy judgment.
+
+## 4.3 Quarterly Models
+
+We also evaluate quarterly forecasting performance on held-out data in order to compare whether a more aggregated time scale improves prediction. 
+
+```{r create-quarterly-model-data}
+quarterly_model_data <- evict %>%
+  ungroup() %>%
+  mutate(
+    quarter_date = floor_date(month_date, unit = "quarter"),
+    quarter_label = paste0(year(quarter_date), " Q", quarter(quarter_date))
+  ) %>%
+  group_by(GEOID, quarter_date, quarter_label, racial_majority) %>%
+  summarise(
+    current_filings = sum(filings_2020, na.rm = TRUE),
+    filings_avg = first(filings_avg),
+    filings_avg_prepandemic_baseline = first(filings_avg_prepandemic_baseline),
+    renters = first(renters),
+    median_gross_rent = first(median_gross_rent),
+    median_household_income = first(median_household_income),
+    rent_burden_pct = first(rent_burden_pct),
+    months_in_quarter = n(),
+    .groups = "drop"
+  ) %>%
+  filter(months_in_quarter == 3) %>%
+  arrange(GEOID, quarter_date) %>%
+  group_by(GEOID) %>%
+  mutate(
+    filings_next = lead(current_filings, 1),
+    filings_next_per_1k_renters = lead((current_filings / renters) * 1000, 1),
+    lag_1q = lag(current_filings, 1),
+    lag_2q = lag(current_filings, 2),
+    change_1q = current_filings - lag_1q,
+    rolling_mean_2q = (lag_1q + lag_2q) / 2
+  ) %>%
+  ungroup() %>%
+  mutate(
+    racial_majority = factor(racial_majority),
+    quarter_factor = factor(quarter(quarter_date), levels = 1:4, labels = c("Q1", "Q2", "Q3", "Q4"))
+  ) %>%
+  filter(
+    !is.na(filings_next),
+    !is.na(lag_1q),
+    !is.na(lag_2q),
+    !is.na(renters),
+    !is.na(median_gross_rent),
+    !is.na(median_household_income),
+    !is.na(rent_burden_pct),
+    renters > 0
+  )
+
+quarterly_split_lookup <- tibble(
+  quarter_date = sort(unique(quarterly_model_data$quarter_date))
+) %>%
+  mutate(
+    data_split = case_when(
+      quarter_date <= ymd("2024-10-01") ~ "Train",
+      quarter_date <= ymd("2025-07-01") ~ "Validation",
+      TRUE ~ "Test"
+    )
+  )
+
+quarterly_model_data <- quarterly_model_data %>%
+  left_join(quarterly_split_lookup, by = "quarter_date")
+
+quarterly_train <- quarterly_model_data %>% filter(data_split == "Train")
+quarterly_validation <- quarterly_model_data %>% filter(data_split == "Validation")
+quarterly_test <- quarterly_model_data %>% filter(data_split == "Test")
+```
+
+```{r fit-quarterly-models}
+quarterly_model_1 <- MASS::glm.nb(
+  filings_next ~ lag_1q + offset(log(renters)),
+  data = quarterly_train
+)
+
+quarterly_model_2 <- MASS::glm.nb(
+  filings_next ~ lag_1q + lag_2q + change_1q + rolling_mean_2q + offset(log(renters)),
+  data = quarterly_train
+)
+
+quarterly_model_3 <- MASS::glm.nb(
+  filings_next ~ lag_1q + lag_2q + change_1q + rolling_mean_2q +
+    filings_avg + filings_avg_prepandemic_baseline +
+    offset(log(renters)),
+  data = quarterly_train
+)
+
+quarterly_model_4 <- MASS::glm.nb(
+  filings_next ~ lag_1q + lag_2q + change_1q + rolling_mean_2q +
+    filings_avg + filings_avg_prepandemic_baseline +
+    racial_majority + quarter_factor +
+    offset(log(renters)),
+  data = quarterly_train
+)
+
+quarterly_model_5 <- MASS::glm.nb(
+  filings_next ~ lag_1q + lag_2q + change_1q + rolling_mean_2q +
+    filings_avg + filings_avg_prepandemic_baseline +
+    racial_majority + quarter_factor +
+    median_gross_rent + median_household_income + rent_burden_pct +
+    offset(log(renters)),
+  data = quarterly_train
+)
+
+quarterly_model_specs <- list(
+  "Model 0: Baseline" = list(type = "baseline"),
+  "Model 1: lag_1q" = list(model = quarterly_model_1),
+  "Model 2: + dynamic terms" = list(model = quarterly_model_2),
+  "Model 3: + historical baselines" = list(model = quarterly_model_3),
+  "Model 4: + race and seasonality" = list(model = quarterly_model_4),
+  "Model 5: + rent and income" = list(model = quarterly_model_5)
+)
+```
+
+```{r compare-quarterly-models}
+quarterly_scores <- bind_rows(
+  evaluate_models(quarterly_validation, "Validation", quarterly_model_specs, "lag_1q"),
+  evaluate_models(quarterly_test, "Test", quarterly_model_specs, "lag_1q")
+) %>%
+  mutate(scale = "Quarterly")
+
+quarterly_scores %>%
+  mutate(across(c(MAE, RMSE, Correlation), round, 3)) %>%
+  dplyr::select(scale, split, model, MAE, RMSE, Correlation) %>%
+  kable(caption = "Quarterly Forecast Performance as Variables Are Added Step by Step") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+**Analysis:** The baseline model (Model 0) achieves the lowest error across all quarterly specifications, and adding covariates consistently worsens performance. Although MAE and RMSE appear larger than the monthly model, the quarterly figures are roughly three times the monthly errors, reflecting the longer forecasting horizon rather than weaker model fit.
+
+```{r quarterly-actual-vs-predicted, fig.width=7, fig.height=5}
+quarterly_test_plot_data <- quarterly_test %>%
+  mutate(
+    pred_best = predict(quarterly_model_5, newdata = quarterly_test, type = "response")
+  ) %>%
+  mutate(
+    pred_best = pmax(pred_best, 0)
+  )
+
+ggplot(quarterly_test_plot_data, aes(x = filings_next, y = pred_best)) +
+  geom_point(alpha = 0.35) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(
+    title = "Quarterly Test Set: Actual vs Predicted Filings",
+    subtitle = "Quarterly negative binomial model with structural covariates",
+    x = "Actual next-quarter filings",
+    y = "Predicted next-quarter filings"
+  ) +
+  theme_minimal()
+```
+
+**Analysis:** The model significantly underpredicts high-filing tracts, with several tracts exceeding 300–400 predicted filings against actuals below 50. Points cluster near zero for low-filing tracts, indicating reasonable performance at the lower end but poor calibration at the high end. The wide scatter around the diagonal confirms the quarterly model struggles to capture extreme filing events.
+
+```{r quarterly-coefficients}
+tidy(quarterly_model_5, conf.int = TRUE, exponentiate = TRUE) %>%
+  filter(term != "(Intercept)") %>%
+  dplyr::select(term, estimate, conf.low, conf.high, p.value) %>%
+  arrange(desc(estimate)) %>%
+  mutate(across(c(estimate, conf.low, conf.high, p.value), round, 3)) %>%
+  head(15) %>%
+  kable(
+    caption = "Quarterly Negative Binomial Model Coefficients (Incidence Rate Ratios)",
+    col.names = c("Term", "IRR", "Lower CI", "Upper CI", "p-value")
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+```{r quarterly-high-risk}
+quarterly_risk_threshold <- quantile(
+  quarterly_train$filings_next_per_1k_renters,
+  probs = 0.90,
+  na.rm = TRUE
+)
+
+quarterly_test_predictions <- quarterly_test %>%
+  mutate(
+    pred_next = predict(quarterly_model_5, newdata = quarterly_test, type = "response"),
+    pred_next_per_1k_renters = (pred_next / renters) * 1000,
+    high_risk_true = if_else(filings_next_per_1k_renters >= quarterly_risk_threshold, 1, 0),
+    high_risk_pred = if_else(pred_next_per_1k_renters >= quarterly_risk_threshold, 1, 0)
+  )
+
+quarterly_risk_scores <- classification_scores(quarterly_test_predictions, "high_risk_true", "high_risk_pred")
+
+quarterly_risk_scores %>%
+  mutate(across(everything(), round, 3)) %>%
+  kable(caption = "Quarterly High-Risk Classification Performance on Test Data") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+```{r quarterly-top-risk-tracts}
+quarterly_latest_forecast <- quarterly_test_predictions %>%
+  filter(quarter_date == max(quarter_date, na.rm = TRUE)) %>%
+  arrange(desc(pred_next_per_1k_renters)) %>%
+  transmute(
+    GEOID,
+    racial_majority,
+    quarter_label,
+    predicted_filings_next_quarter = round(pred_next, 2),
+    predicted_rate_next_quarter = round(pred_next_per_1k_renters, 2),
+    predicted_high_risk = high_risk_pred
+  )
+
+quarterly_latest_forecast %>%
+  slice(1:15) %>%
+  kable(caption = "Top 15 Tracts by Predicted Next-Quarter Risk") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+**Summary:** As with the monthly models, MAE and RMSE capture prediction error and correlation reflects the model ability to preserve tract-level ranking. Overall, quarterly performance is weaker (lowest MAE at 3.825 compared to monthly at 1.622), suggesting that aggregation smooths over some of the short-term signal that is useful for forecasting eviction filings.
+
+The quarterly actual-versus-predicted plot appears more dispersed, indicating weaker fit at the tract level. Aggregating to quarterly totals may smooth over some of the short-term signal that improves monthly forecasting performance.
+
+## 4.4 Model Diagnostics
+
+```{r monthly-residual-diagnostic, fig.width=7, fig.height=5}
+monthly_residual_data <- monthly_test_plot_data %>%
+  mutate(
+    residual = filings_next - pred_best
+  )
+
+ggplot(monthly_residual_data, aes(x = pred_best, y = residual)) +
+  geom_point(alpha = 0.35) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(
+    title = "Monthly Test Set Residual Diagnostics",
+    subtitle = "Residuals from the preferred monthly forecasting model",
+    x = "Predicted next-month filings",
+    y = "Residual (actual - predicted)"
+  ) +
+  theme_minimal()
+```
+
+**Summary:** Residual diagnostics show that prediction errors become larger at higher predicted filing levels. This suggests that the preferred monthly model is less stable in the highest-risk tracts, which matters for policy use because underpredicting extreme-risk neighborhoods would reduce the effectiveness of early intervention.
+
+# 5 Final Prediction
+
+## 5.1 Selected Forecasting Model
+
+```{r overall-comparison-table}
+overall_comparison <- bind_rows(
+  monthly_scores %>%
+    filter(model %in% c("Model 0: Baseline", "Model 0b: + lag_12m baseline", "Model 0c: + rolling_mean_3m baseline", "Model 5: + rent and income")) %>%
+    mutate(scale = "Monthly"),
+  quarterly_scores %>%
+    filter(model %in% c("Model 0: Baseline", "Model 5: + rent and income")) %>%
+    mutate(scale = "Quarterly")
+) %>%
+  mutate(across(c(MAE, RMSE, Correlation), round, 3))
+
+overall_comparison %>%
+  dplyr::select(scale, split, model, MAE, RMSE, Correlation) %>%
+  kable(caption = "Overall Comparison of Monthly and Quarterly Forecasting Results") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+```{r overall-comparison-plot}
+overall_comparison_plot <- overall_comparison %>%
+  mutate(
+    model_short = case_when(
+      model == "Model 0: Baseline" ~ "M0\nLag only",
+      model == "Model 0b: + lag_12m baseline" ~ "M0b\n+ lag 12m",
+      model == "Model 0c: + rolling_mean_3m baseline" ~ "M0c\n+ rolling mean",
+      model == "Model 5: + rent and income" ~ "M5\nFull NB",
+      TRUE ~ model
+    )
+  )
+
+ggplot(overall_comparison_plot, aes(x = model_short, y = RMSE, fill = split)) +
+  geom_col(position = "dodge", color = "white", linewidth = 0.2) +
+  facet_wrap(~ scale, scales = "free_x") +
+  scale_fill_manual(values = c("Validation" = "#6f8fb3", "Test" = "#17365d")) +
+  labs(
+    title = "Monthly vs. Quarterly Out-of-Sample Forecast Accuracy",
+    subtitle = "Lower RMSE indicates better predictive performance",
+    x = NULL,
+    y = "RMSE"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 9),
+    strip.text = element_text(face = "bold")
+  )
+```
+
+**Summary:** The best model here is **a baseline model with rolling_mean_3m**.
+
+Overall, the evaluation suggests that **monthly forecasting** performs better than quarterly forecasting for predicting future eviction filings. Among the monthly specifications, the **enhanced baseline with lag variables** achieves the strongest out-of-sample performance. This indicate that recent filing history, seasonal recurrence, and short-term persistence are more useful for forecasting than broader structural covariates alone.
+
+At the same time, the richer negative binomial models remain valuable for interpretation. They help explain how tract-level characteristics such as rent burden, income, and neighborhood composition are associated with eviction risk, even if they do not produce the strongest out-of-sample forecasts. For policy purposes, the enhanced monthly baseline is therefore the best option for short-term early-warning and tract prioritization, while the fuller negative binomial model is more useful for understanding structural differences in risk across neighborhoods.
+
+These results suggest that the model should be used as a decision-support tool for prioritizing rental assistance and tenant outreach, not as an automated decision rule or an individual-level targeting system.
+
+# 6 Policy Application
+
+## 6.1 Rental Assistance Targeting
+
+This model supports three complementary policy uses: proactive rental assistance targeting, legal aid allocation, and housing agency early warning.
+
+**Rental assistance targeting.** Monthly tract-level forecasts enable city agencies and nonprofit partners to identify neighborhoods at elevated eviction risk before filings enter the court system. This proactive approach shifts resources upstream—toward emergency rental assistance, tenant counseling, and direct outreach—rather than waiting for households to reach formal proceedings.
+
+**Legal aid allocation.** Legal aid organizations face persistent capacity constraints that prevent uniform coverage across all neighborhoods. Predicted high-risk tracts can guide the deployment of outreach events, mobile legal clinics, and tenant referrals to where demand is likely to peak, maximizing the impact of limited staff resources.
+
+**Early warning dashboard.** Integrated into a monthly dashboard, the model can display predicted filing counts, renter-adjusted risk rates, and high-risk tract flags across Philadelphia. This gives housing agencies a consistent, forward-looking view of where eviction pressure is building and supports timely, coordinated intervention.
+
+## 6.2 Equity and Safeguards
+
+The model must be used exclusively to **expand support for renters**, not to surveil, penalize, or stigmatize high-risk neighborhoods. The data show that Black-majority tracts have higher average eviction filings. This reflects structural inequities in Philadelphia's housing market, including unequal exposure to rent burden and housing instability. It describes neighborhood-level conditions, not characteristics of individual residents or communities.
+
+Four safeguards should govern any policy deployment:
+
+First, predictions should be restricted to **supportive interventions** like rental assistance, legal aid outreach, tenant counseling, and community-based prevention. The model must not be used for landlord screening, tenant eligibility determinations, code enforcement targeting, or any punitive purpose.
+
+Second, the model should operate **at the census tract level, not the household level**. Tract-level targeting focuses resources on neighborhoods with elevated collective risk, avoiding the harms of labeling individual tenants.
+
+Third, all high-risk tract designations should be **reviewed by housing agencies and community partners** before resources are deployed. Human oversight is especially important given that residual diagnostics show larger prediction errors in high-filing tracts—the neighborhoods most critical for intervention are also the hardest to forecast accurately.
+
+Fourth, the city should **monitor** whether model-informed resources reach the neighborhoods of greatest need. Where the model systematically underpredicts risk or where assistance fails to arrive as planned, both the model and the implementation process should be revised.
+
+# 7 Limitations
+
+## 7.1 Data Limitations
+
+The analysis relies on eviction filing records, which measure court activity rather than completed evictions or the full range of housing instability. Households experiencing informal displacement, "cash for keys" pressure, or severe rent burden without a filed case are not captured. Sealed records are excluded because they lack usable tract identifiers, which may cause undercounting in some areas. Finally, the ACS housing variables are tract-level estimates from a single survey year and do not align perfectly with month-to-month variation in filings.
+
+## 7.2 Model Limitations
+
+The model predicts eviction risk at the census tract level and is not designed for individual-level inference and it should never be used to make decisions about specific tenants or landlords. Although the preferred monthly model outperforms the quarterly specification, it produces larger errors in high-filing tracts, precisely the areas where accurate prediction matters most for intervention. The model captures persistent temporal patterns well, but it cannot fully account for sudden policy shifts, economic shocks, landlord behavior, or household-level circumstances.
+
+## 7.3 Policy Limitations
+
+Predictions alone do not resolve eviction risk. Effective implementation requires adequate rental assistance funding, sufficient legal aid capacity, trusted community partnerships, and timely data updates. There is also a misuse risk: if the model is deployed outside its intended supportive purpose, high-risk labels could be repurposed for exclusion or punitive action. The model should therefore be treated as a decision-support tool for prevention, not as an automated rule for benefit allocation or neighborhood evaluation.
+
+# 8 Conclusion
+
+## 8.1 Technical Takeaways
+
+Recent eviction filing history is the strongest predictor of short-term future filings. Monthly forecasting consistently outperforms quarterly forecasting, as quarterly aggregation obscures short-term temporal signal. Adding structural covariates such as rent burden, household income, and neighborhood composition does not improve out-of-sample performance; in most specifications, it increases prediction error. The negative binomial models with structural covariates are better suited for interpreting why certain tracts carry higher baseline risk than for short-term forecasting.
+
+## 8.2 Policy Takeaways
+
+The model is best used as an early warning tool for rental assistance targeting, legal aid allocation, and housing agency monitoring. It can identify census tracts where eviction pressure is likely to rise, enabling agencies and nonprofit partners to intervene before filings spike. Predictions should be used only to expand supportive services for renters, and must be paired with human review and equity monitoring to ensure resources reach those most in need.
