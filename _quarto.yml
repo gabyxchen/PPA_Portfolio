@@ -22,7 +22,9 @@ website:
           - href: lab/lab4/lab4.qmd
             text: "Lab 4: Spatial Predictive Analysis"
           - href: lab/lab5/week11_inclass_and_lab5.qmd
-            text: "Lab 5: Bikeshare_SpaceTime_Prediction"
+            text: "Lab 5: Bikeshare SpaceTime Prediction"
+          - href: lab/final/eviction_model.qmd
+            text: "Final: Philadelphia Eviction Model"
 
 
 format:
