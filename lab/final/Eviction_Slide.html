@@ -1000,6 +1000,20 @@ Daisy, Gab, Johnny, Yiting
 
   <p class="date">2026-04-28</p>
 </section>
+<section class="slide level2">
+
+<style>
+.reveal .compact-model-table table {
+font-size: 0.54em;
+line-height: 1.15;
+}
+.reveal .compact-model-table th,
+.reveal .compact-model-table td {
+padding: 0.22em 0.45em;
+white-space: nowrap;
+}
+</style>
+</section>
 <section id="the-policy-problem" class="slide level2">
 <h2>The Policy Problem</h2>
 <ul>
@@ -1165,16 +1179,6 @@ We focus on three questions:<br>
 </ul>
 </div></div>
 </section>
-<section id="from-data-to-policy-targeting" class="slide level2">
-<h2>From Data to Policy Targeting</h2>
-<ol type="1">
-<li class="fragment">Use recent eviction filing history.</li>
-<li class="fragment">Add tract-level housing conditions.</li>
-<li class="fragment">Predict future filing risk.</li>
-<li class="fragment">Identify elevated-risk census tracts.</li>
-<li class="fragment">Support rental assistance targeting.</li>
-</ol>
-</section>
 <section id="model-performance-summary" class="slide level2">
 <h2>Model Performance Summary</h2>
 <table class="caption-top">
@@ -1207,6 +1211,7 @@ We focus on three questions:<br>
 </section>
 <section id="rolling-monthly-baseline-has-the-lowest-error" class="slide level2">
 <h2>Rolling Monthly Baseline Has the Lowest Error</h2>
+<div class="compact-model-table">
 <table class="caption-top" style="width:100%;">
 <colgroup>
 <col style="width: 16%">
@@ -1218,18 +1223,18 @@ We focus on three questions:<br>
 </colgroup>
 <thead>
 <tr class="header">
-<th>Selection criterion</th>
+<th>Criterion</th>
 <th>Best model</th>
 <th>Scale</th>
-<th style="text-align: right;">Test MAE</th>
-<th style="text-align: right;">Test RMSE</th>
+<th style="text-align: right;">MAE</th>
+<th style="text-align: right;">RMSE</th>
 <th style="text-align: right;">Correlation</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td>Lowest error</td>
-<td>Rolling-mean temporal baseline</td>
+<td>Rolling monthly baseline</td>
 <td>Monthly</td>
 <td style="text-align: right;">1.657</td>
 <td style="text-align: right;">2.441</td>
@@ -1237,7 +1242,7 @@ We focus on three questions:<br>
 </tr>
 <tr class="even">
 <td>Strongest ranking</td>
-<td>Simple temporal baseline</td>
+<td>Quarterly temporal baseline</td>
 <td>Quarterly</td>
 <td style="text-align: right;">3.718</td>
 <td style="text-align: right;">5.422</td>
@@ -1245,7 +1250,7 @@ We focus on three questions:<br>
 </tr>
 <tr class="odd">
 <td>Richer covariates</td>
-<td>NB with rent and income covariates</td>
+<td>Monthly NB covariates</td>
 <td>Monthly</td>
 <td style="text-align: right;">2.137</td>
 <td style="text-align: right;">4.265</td>
@@ -1253,6 +1258,7 @@ We focus on three questions:<br>
 </tr>
 </tbody>
 </table>
+</div>
 </section>
 <section id="model-performance-summary-1" class="slide level2">
 <h2>Model Performance Summary</h2>
@@ -1267,7 +1273,7 @@ We focus on three questions:<br>
 <h2>Monthly Forecasts Better Match Time-Sensitive Outreach</h2>
 <ul>
 <li>Rental assistance is often time-sensitive.</li>
-<li>Monthly forecasts identify risk closer to when filings may occur.</li>
+<li>Monthly forecasts provide more timely identification of eviction risk.</li>
 <li>Recent filing history and rolling averages capture short-term persistence.</li>
 <li>This makes monthly prediction better suited for early outreach and prevention.</li>
 </ul>
