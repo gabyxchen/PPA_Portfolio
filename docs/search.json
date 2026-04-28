@@ -3477,5 +3477,187 @@
     "title": "Philadelphia Eviction Model - Technical Appendix",
     "section": "8.2 Policy Takeaways",
     "text": "8.2 Policy Takeaways\nThe model is best used as an early warning tool for rental assistance targeting, legal aid allocation, and housing agency monitoring. It can identify census tracts where eviction pressure is likely to rise, enabling agencies and nonprofit partners to intervene before filings spike. Predictions should be used only to expand supportive services for renters, and must be paired with human review and equity monitoring to ensure resources reach those most in need."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#the-policy-problem",
+    "href": "lab/final/Eviction_Slide.html#the-policy-problem",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "The Policy Problem",
+    "text": "The Policy Problem\n\nEviction filings are not evenly distributed across Philadelphia.\nLimited rental assistance resources require a way to identify where preventive intervention may be most needed.\n\n**This project asks whether eviction filing data can help identify high-risk census tracts before housing instability worsens.**"
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#research-question",
+    "href": "lab/final/Eviction_Slide.html#research-question",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Research Question",
+    "text": "Research Question\nCan recent eviction filing patterns help predict future eviction risk across Philadelphia census tracts?\n\nWe focus on three questions:\n\n- Which tracts show persistent high filing activity?\n- Does monthly or quarterly prediction work better?\n- Can the model support rental assistance targeting?"
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#data-and-study-design",
+    "href": "lab/final/Eviction_Slide.html#data-and-study-design",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Data and Study Design",
+    "text": "Data and Study Design\n\n\n\nComponent\nDescription\n\n\n\n\nOutcome\nEviction filings\n\n\nGeography\nPhiladelphia tracts\n\n\nPeriod\nMar 2023–Mar 2026\n\n\nPredictors\nFiling history, ACS housing variables\n\n\nTask\nPredict next month / quarter\n\n\nUse\nTarget rental assistance"
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#post-pandemic-filings-offer-a-more-stable-modeling-window",
+    "href": "lab/final/Eviction_Slide.html#post-pandemic-filings-offer-a-more-stable-modeling-window",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Post-Pandemic Filings Offer a More Stable Modeling Window",
+    "text": "Post-Pandemic Filings Offer a More Stable Modeling Window\nThe model needs a stable policy environment.\n\nPandemic-era filing patterns were highly disrupted.\nMarch 2023 onward shows more consistent monthly variation.\nThis period better reflects current eviction risk.\nWe use this period to train a more comparable forecasting model."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#monthly-filings-stabilize-after-pandemic-disruption",
+    "href": "lab/final/Eviction_Slide.html#monthly-filings-stabilize-after-pandemic-disruption",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Monthly Filings Stabilize After Pandemic Disruption",
+    "text": "Monthly Filings Stabilize After Pandemic Disruption"
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#eviction-filings-are-highly-skewed",
+    "href": "lab/final/Eviction_Slide.html#eviction-filings-are-highly-skewed",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Eviction Filings Are Highly Skewed",
+    "text": "Eviction Filings Are Highly Skewed"
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#skewed-filing-counts-support-count-models-and-risk-flags",
+    "href": "lab/final/Eviction_Slide.html#skewed-filing-counts-support-count-models-and-risk-flags",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Skewed Filing Counts Support Count Models and Risk Flags",
+    "text": "Skewed Filing Counts Support Count Models and Risk Flags\n\nMost tract-months have zero or very low filings.\nA small number of observations have much higher filing counts.\nThis distribution supports using count-based models and high-risk classification."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#spatial-patterns-of-eviction-risk",
+    "href": "lab/final/Eviction_Slide.html#spatial-patterns-of-eviction-risk",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Spatial Patterns of Eviction Risk",
+    "text": "Spatial Patterns of Eviction Risk"
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#spatial-hotspots-point-to-stronger-assistance-targets",
+    "href": "lab/final/Eviction_Slide.html#spatial-hotspots-point-to-stronger-assistance-targets",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Spatial Hotspots Point to Stronger Assistance Targets",
+    "text": "Spatial Hotspots Point to Stronger Assistance Targets\n\nEviction burden is not evenly distributed across Philadelphia.\nRaw filing counts show where total eviction activity is highest.\nRenter-adjusted rates show where eviction risk is most concentrated.\nTracts high on both measures are stronger candidates for rental assistance targeting."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#eviction-risk-and-neighborhood-demographics",
+    "href": "lab/final/Eviction_Slide.html#eviction-risk-and-neighborhood-demographics",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Eviction Risk and Neighborhood Demographics",
+    "text": "Eviction Risk and Neighborhood Demographics\n\n\n\nTract racial majority\nAvg. monthly filings\n\n\n\n\nBlack\n3.80\n\n\nHispanic\n2.63\n\n\nOther\n2.60\n\n\nWhite\n1.70"
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#structural-housing-inequality",
+    "href": "lab/final/Eviction_Slide.html#structural-housing-inequality",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Structural Housing Inequality",
+    "text": "Structural Housing Inequality\n\nBlack-majority tracts show higher average eviction filing levels.\nHispanic-majority and other-majority tracts also show higher filings than white-majority tracts.\nThese patterns suggest eviction risk reflects broader structural disparities in housing stability.\nModel outputs should be interpreted with equity safeguards."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#modeling-strategy",
+    "href": "lab/final/Eviction_Slide.html#modeling-strategy",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Modeling Strategy",
+    "text": "Modeling Strategy\nWe test whether recent filing history can predict future tract-level eviction risk.\n\nMonthly model: predicts next-month eviction filings.\nQuarterly model: predicts next-quarter eviction filings.\nKey predictors: lagged filings, rolling averages, historical baselines, and ACS housing variables.\nEvaluation: prediction error, tract ranking, and high-risk classification."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#monthly-vs.-quarterly-forecasting",
+    "href": "lab/final/Eviction_Slide.html#monthly-vs.-quarterly-forecasting",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Monthly vs. Quarterly Forecasting",
+    "text": "Monthly vs. Quarterly Forecasting\nWe compare two forecasting scales because they serve different policy needs.\n\n\nMonthly\n\nShorter intervention window\nMore sensitive to recent changes\nBetter for rapid outreach\nMore month-to-month noise\n\n\nQuarterly\n\nSmoother filing patterns\nBetter for broader planning\nLess reactive to sudden spikes\nLonger delay before intervention"
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#from-data-to-policy-targeting",
+    "href": "lab/final/Eviction_Slide.html#from-data-to-policy-targeting",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "From Data to Policy Targeting",
+    "text": "From Data to Policy Targeting\n\nUse recent eviction filing history.\nAdd tract-level housing conditions.\nPredict future filing risk.\nIdentify elevated-risk census tracts.\nSupport rental assistance targeting."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#model-performance-summary",
+    "href": "lab/final/Eviction_Slide.html#model-performance-summary",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Model Performance Summary",
+    "text": "Model Performance Summary\n\n\n\nModel\nScale\nTest MAE\nTest RMSE\nCorrelation\n\n\n\n\nRolling baseline\nMonthly\n1.657\n2.441\n0.678\n\n\nBaseline\nQuarterly\n3.718\n5.422\n0.779"
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#rolling-monthly-baseline-has-the-lowest-error",
+    "href": "lab/final/Eviction_Slide.html#rolling-monthly-baseline-has-the-lowest-error",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Rolling Monthly Baseline Has the Lowest Error",
+    "text": "Rolling Monthly Baseline Has the Lowest Error\n\n\n\n\n\n\n\n\n\n\n\nSelection criterion\nBest model\nScale\nTest MAE\nTest RMSE\nCorrelation\n\n\n\n\nLowest error\nRolling-mean temporal baseline\nMonthly\n1.657\n2.441\n0.678\n\n\nStrongest ranking\nSimple temporal baseline\nQuarterly\n3.718\n5.422\n0.779\n\n\nRicher covariates\nNB with rent and income covariates\nMonthly\n2.137\n4.265\n0.594"
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#model-performance-summary-1",
+    "href": "lab/final/Eviction_Slide.html#model-performance-summary-1",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Model Performance Summary",
+    "text": "Model Performance Summary\n\nRecent filing history is highly predictive.\nSimple temporal baselines perform better than more complex models.\nAdding more structural covariates does not always improve out-of-sample accuracy.\nMonthly prediction is more useful for short-term intervention planning."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#monthly-forecasts-better-match-time-sensitive-outreach",
+    "href": "lab/final/Eviction_Slide.html#monthly-forecasts-better-match-time-sensitive-outreach",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Monthly Forecasts Better Match Time-Sensitive Outreach",
+    "text": "Monthly Forecasts Better Match Time-Sensitive Outreach\n\nRental assistance is often time-sensitive.\nMonthly forecasts identify risk closer to when filings may occur.\nRecent filing history and rolling averages capture short-term persistence.\nThis makes monthly prediction better suited for early outreach and prevention."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#monthly-model-diagnostics",
+    "href": "lab/final/Eviction_Slide.html#monthly-model-diagnostics",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Monthly Model Diagnostics",
+    "text": "Monthly Model Diagnostics"
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#the-model-captures-patterns-but-misses-extremes",
+    "href": "lab/final/Eviction_Slide.html#the-model-captures-patterns-but-misses-extremes",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "The Model Captures Patterns but Misses Extremes",
+    "text": "The Model Captures Patterns but Misses Extremes\n\nPredictions follow the general tract-level pattern.\nThe model compresses the upper tail of high-filing tracts.\nExtreme filing spikes remain difficult to predict.\nThis supports using the model as a screening tool, not an automatic decision rule."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#quarterly-model-diagnostics",
+    "href": "lab/final/Eviction_Slide.html#quarterly-model-diagnostics",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Quarterly Model Diagnostics",
+    "text": "Quarterly Model Diagnostics"
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#quarterly-model-trade-off",
+    "href": "lab/final/Eviction_Slide.html#quarterly-model-trade-off",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Quarterly Model Trade off",
+    "text": "Quarterly Model Trade off\nQuarterly aggregation smooths short-term noise, but it can hide sudden tract-level changes.\n\nQuarterly predictions are less sensitive to monthly volatility.\nThis can help with general planning.\nBut the model struggles with extreme high-filing tracts.\nFor targeted rental assistance, this delay can be costly."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#policy-application",
+    "href": "lab/final/Eviction_Slide.html#policy-application",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Policy Application",
+    "text": "Policy Application\nThe model is most useful as an early-warning and prioritization tool.\n\nIdentify tracts with elevated predicted filing risk.\nPrioritize outreach before filings escalate.\nSupport rental assistance targeting at the neighborhood level.\nCombine model output with local knowledge and equity review.\n\nThe model should support policy judgment, not replace it."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#key-takeaways",
+    "href": "lab/final/Eviction_Slide.html#key-takeaways",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Key Takeaways",
+    "text": "Key Takeaways\n\nEviction filings in Philadelphia are spatially concentrated and structurally uneven.\nRecent filing history is the strongest short-term predictor of future filings.\nForecasting models can help target rental assistance, but should be used with equity checks and policy judgment."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#conclusion",
+    "href": "lab/final/Eviction_Slide.html#conclusion",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Conclusion",
+    "text": "Conclusion\nEviction risk is predictable enough to support early intervention, but not predictable enough to automate policy decisions.\nA short-term forecasting model can help Philadelphia identify elevated-risk tracts and prioritize rental assistance outreach.\nIts strongest use is not replacing human judgment, but making policy response faster, more targeted, and more transparent."
+  },
+  {
+    "objectID": "lab/final/Eviction_Slide.html#thank-you",
+    "href": "lab/final/Eviction_Slide.html#thank-you",
+    "title": "Philadelphia Eviction Forecasting Model",
+    "section": "Thank You！",
+    "text": "Thank You！\n\nQuestions and Discussion ？\n\nDaisy, Gab, Johnny, Yiting\nCPLN 5920 | Philadelphia Eviction Forecasting Model"
   }
 ]

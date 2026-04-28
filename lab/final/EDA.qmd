@@ -4,9 +4,10 @@ format: html
 ---
 
 ## Start with the outcome variable (filings)
-- How skewed is it?
-- How many zeros?
-- Overdispersion?
+
+-   How skewed is it?
+-   How many zeros?
+-   Overdispersion?
 
 ```{r setup, include=FALSE}
 #| message: false
@@ -59,7 +60,8 @@ evict <- evict %>%
   dplyr::select(-last_updated)
 
 ```
----
+
+------------------------------------------------------------------------
 
 ## Distribution
 
@@ -68,13 +70,15 @@ ggplot(evict, aes(x = filings_2020)) +
   geom_histogram(bins = 50)
 
 ```
+
 Eviction filings are highly skewed and there are a lot of zeros.
 
----
+------------------------------------------------------------------------
 
 ## Time Trends
-- Upward/downward trends
-- Seasonal patterns
+
+-   Upward/downward trends
+-   Seasonal patterns
 
 ```{r}
 evict %>%
@@ -84,12 +88,13 @@ evict %>%
   geom_line()
 
 ```
-**Summary:** There is no strong long-term trend in the filing data and very high month-to-month volatility.
----
+
+## **Summary:** There is no strong long-term trend in the filing data and very high month-to-month volatility.
 
 ## Spatial Inequality
-- Top & bottom tracts
-- top 10 tracts by absolute filing numbers and concentration
+
+-   Top & bottom tracts
+-   top 10 tracts by absolute filing numbers and concentration
 
 ```{r}
 evict %>%
@@ -158,12 +163,12 @@ hotspot
 
 ```
 
-**Summary:** There are a few tracts that have very high filing records. By finding the top 10 census tracts with highest filing records and top 10 census tracts with highest filing record concentration, we identify two high risk census tracts that appear in both lists as rental assistance policy hotspots.
----
+## **Summary:** There are a few tracts that have very high filing records. By finding the top 10 census tracts with highest filing records and top 10 census tracts with highest filing record concentration, we identify two high risk census tracts that appear in both lists as rental assistance policy hotspots.
 
 ## Dynamics
-- Create multiple lag variables (1 month lag, 1 quarter lag)
-- Visualize Changes
+
+-   Create multiple lag variables (1 month lag, 1 quarter lag)
+-   Visualize Changes
 
 ```{r}
 evict <- evict %>%
@@ -200,9 +205,10 @@ ggplot(evict, aes(x = change_3m)) +
   labs(title = "Quarterly Change in Filings")
 
 ```
+
 **Summary:** Both monthly and quarterly change have symmetrical distribution. Eviction filings are not consistently increasing or decreasing. Changes in eviction activity fluctuate around a stable baseline rather than showing persistent growth or decline. This suggests that recent lag components of filings are strong predictors for future risks.
 
----
+------------------------------------------------------------------------
 
 ## Race/Demographic Patterns
 
@@ -212,35 +218,5 @@ evict %>%
   summarise(avg_filings = mean(filings_2020, na.rm = TRUE))
 
 ```
-**Summary:** Black-majority neighborhoods have substantially higher average eviction filings. Even after adjusting for renter population, eviction activity remains higher in Black-majority neighborhoods, suggesting structural disparities in housing stability.
----
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## **Summary:** Black-majority neighborhoods have substantially higher average eviction filings. Even after adjusting for renter population, eviction activity remains higher in Black-majority neighborhoods, suggesting structural disparities in housing stability.
